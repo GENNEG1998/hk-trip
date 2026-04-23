@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🏕️ 五一香港徒步 v5.1 · 翻页卡片地图</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1a12;--card:#162119;--card2:#1a2b20;--ink:#d4e8d8;--muted:#6b8a72;
+  --brand:#2dd47b;--brand-dim:rgba(45,212,123,.15);
+  --sea:#0ea5c7;--sea-dim:rgba(14,165,199,.15);
+  --warn:#f87171;--warn-dim:rgba(248,113,113,.12);
+  --accent:#fbbf24;--accent-dim:rgba(251,191,36,.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.15);
+  --sky:#38bdf8;--sky-dim:rgba(56,189,248,.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.12);
+  --pink:#f472b6;--pink-dim:rgba(244,114,182,.12);
+  --line:#1e3326;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC',sans-serif;font-size:14px;line-height:1.5;
+  background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent;user-select:none}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* ─── 顶部栏 ─── */
+.topbar{display:flex;align-items:center;padding:8px 12px;gap:8px;
+  background:linear-gradient(135deg,#0f1a12,#0d2618);border-bottom:1px solid var(--line);flex-shrink:0;z-index:20}
+.topbar h1{font-size:14px;font-weight:800;color:var(--brand);white-space:nowrap}
+.topbar .sub{font-size:10px;color:var(--muted)}
+.pills{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.pill{padding:2px 6px;border-radius:99px;font-size:9px;border:1px solid var(--line);color:var(--muted)}
+.pill.b{border-color:var(--brand);color:var(--brand)}
+.pill.s{border-color:var(--sea);color:var(--sea)}
+
+/* ─── 地图 ─── */
+#map{flex:1;min-height:0;z-index:1}
+
+/* ─── 底部卡片区 ─── */
+.card-dock{flex-shrink:0;position:relative;background:var(--bg);border-top:1px solid var(--line);z-index:10;
+  display:flex;flex-direction:column;max-height:52vh}
+.day-tabs{display:flex;overflow-x:auto;flex-shrink:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  border-bottom:1px solid var(--line);background:var(--bg)}
+.day-tabs::-webkit-scrollbar{display:none}
+.day-tab{padding:8px 12px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;
+  color:var(--muted);border-bottom:2.5px solid transparent;transition:.15s;flex-shrink:0}
+.day-tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+.cards-wrap{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 10px;scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+  -webkit-overflow-scrolling:touch}
+.cards-wrap::-webkit-scrollbar{width:3px}
+.cards-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+
+/* 站点卡片 */
+.scard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;
+  cursor:pointer;transition:.15s}
+.scard:active{transform:scale(.98)}
+.scard .sc-head{display:flex;align-items:center;gap:6px}
+.scard .sc-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--sea);font-weight:700;white-space:nowrap}
+.scard .sc-emoji{font-size:16px}
+.scard .sc-title{font-size:12px;font-weight:700;flex:1}
+.scard .sc-expand{font-size:9px;color:var(--muted);transition:transform .2s}
+.scard.open .sc-expand{transform:rotate(180deg)}
+.sc-body{display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6}
+.scard.open .sc-body{display:block}
+
+/* 标签 */
+.tag{display:inline-block;padding:1px 5px;border-radius:4px;font-size:9px;margin:1px 2px;font-weight:600}
+.tag.g{background:var(--brand-dim);color:var(--brand)}
+.tag.s{background:var(--sea-dim);color:var(--sea)}
+.tag.o{background:var(--orange-dim);color:var(--orange)}
+.tag.r{background:var(--warn-dim);color:var(--warn)}
+.tag.y{background:var(--accent-dim);color:var(--accent)}
+.tag.p{background:var(--purple-dim);color:var(--purple)}
+.tag.sky{background:var(--sky-dim);color:var(--sky)}
+.tag.pk{background:var(--pink-dim);color:var(--pink)}
+
+/* 备选方案 */
+.alt-box{background:var(--card2);border:1px dashed var(--line);border-radius:6px;padding:6px 8px;margin-top:5px}
+.alt-box .alt-title{font-size:10px;font-weight:700;color:var(--accent);margin-bottom:2px}
+/* 推荐理由 */
+.reason-box{background:var(--sky-dim);border-radius:6px;padding:6px 8px;margin-top:5px;border-left:3px solid var(--sky)}
+.reason-box .reason-label{font-size:9px;font-weight:700;color:var(--sky);margin-bottom:1px}
+.reason-box .reason-text{font-size:10px;color:var(--ink);line-height:1.5}
+/* 美食推荐 */
+.food-box{background:var(--brand-dim);border-radius:6px;padding:6px 8px;margin-top:5px}
+.food-box .food-title{font-size:10px;font-weight:700;color:var(--brand);margin-bottom:2px}
+.food-item{font-size:10px;color:var(--ink);padding:1px 0}
+.food-item .fname{font-weight:700}
+.food-item .fprice{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:9px}
+/* 购票信息 */
+.ticket-box{background:var(--purple-dim);border-radius:6px;padding:6px 8px;margin-top:5px}
+.ticket-box .ticket-title{font-size:10px;font-weight:700;color:var(--purple);margin-bottom:2px}
+/* 真实照片 */
+.photo-box{margin-top:5px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.photo-box img{width:100%;display:block;cursor:pointer;transition:transform .2s}
+.photo-box img:active{transform:scale(1.02)}
+.photo-box .photo-cap{font-size:9px;color:var(--muted);padding:3px 6px;background:var(--card2)}
+.photo-viewer{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.photo-viewer img{max-width:95vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5)}
+
+/* ─── Q版标记 ─── */
+.qmarker{display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));
+  transition:transform .15s}
+.qmarker:hover{transform:scale(1.15)}
+.qmarker .qbubble{position:relative;padding:4px 8px;border-radius:12px;font-size:13px;font-weight:800;
+  color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);white-space:nowrap;line-height:1.2;
+  border:2px solid rgba(255,255,255,.35)}
+.qmarker .qbubble::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+  border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid currentColor;
+  opacity:.9}
+.qmarker .qemo{font-size:22px;margin-bottom:2px}
+
+/* ─── 路线箭头 ─── */
+.route-arrow{pointer-events:none !important;z-index:200 !important}
+
+/* Leaflet popup */
+.leaflet-popup-content-wrapper{background:var(--card)!important;color:var(--ink)!important;
+  border:1px solid var(--line)!important;border-radius:10px!important;box-shadow:0 4px 20px rgba(0,0,0,.5)!important}
+.leaflet-popup-tip{background:var(--card)!important}
+.leaflet-popup-content{font-family:'Noto Sans SC',sans-serif!important;font-size:12px!important;line-height:1.5!important}
+.leaflet-popup-content .pop-title{font-weight:800;font-size:14px;margin-bottom:3px}
+.leaflet-popup-content .pop-detail{color:var(--muted);font-size:11px}
+
+/* 图例 */
+.legend{position:absolute;bottom:8px;right:8px;z-index:1000;background:rgba(15,26,18,.92);
+  backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:10px}
+.legend h4{font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.legend .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.legend .line{width:20px;height:3px;border-radius:2px}
+
+/* 移动端 */
+@media(max-width:600px){
+  .topbar h1{font-size:12px}
+  .topbar .sub{display:none}
+  .card-dock{max-height:50vh}
+  .scard{padding:8px 10px}
+  .legend{bottom:4px;right:4px;padding:4px 8px;font-size:9px}
+}
+@media(min-width:900px){
+  #app{flex-direction:row}
+  .topbar{flex-direction:column;align-items:flex-start;width:50px;padding:8px;gap:4px}
+  .topbar .sub,.pills{display:none}
+  #map{flex:1;min-width:0}
+  .card-dock{width:360px;max-height:100vh;border-top:none;border-left:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <h1>🏕️ 五一香港徒步 v5.1</h1>
+    <div class="sub">4.30晚出发 · 五天全满</div>
+    <div class="pills">
+      <span class="pill b">⛺ 扎营</span>
+      <span class="pill s">🚤 快艇</span>
+      <span class="pill b">⛰️ 山顶</span>
+    </div>
+  </div>
+  <div id="map"></div>
+  <div class="card-dock">
+    <div class="day-tabs" id="dayTabs"></div>
+    <div class="cards-wrap" id="cardsWrap"></div>
+  </div>
+</div>
+
+<div class="legend" id="legendBox">
+  <h4>路线 · <span id="legendDay">5.1</span></h4>
+  <div id="legendContent"></div>
+  <div style="margin-top:4px;font-size:9px;color:var(--muted)">右键/D 切底图 <span id="base-indicator">🛰️卫星</span></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   数据驱动：所有行程在此定义
+   每天的 routes 数组定义当天显示的路线
+   ═══════════════════════════════════════ */
+const DAYS=[
+{id:"d51",label:"5.1 🥾",title:"[周五] 凌晨到深圳 → 过关 → 东坝 → 破边洲 → 咸田湾扎营",color:"#2dd47b",
+dayNum:"5.1",
+routes:[
+  {label:"🚄 东铁线",pts:["szStation","luohu",
+    [22.528,114.128],[22.518,114.122],[22.508,114.128],[22.498,114.138],
+    [22.485,114.152],[22.472,114.168],[22.456,114.180],[22.440,114.188],
+    [22.428,114.195],"university"],color:"#fb923c",dash:"8,6",w:2.5,op:.6},
+  {label:"🚐 NR9A→东坝",pts:["university",
+    [22.410,114.208],[22.403,114.218],[22.398,114.235],[22.395,114.255],
+    [22.393,114.275],[22.394,114.290],[22.396,114.305],"pakTamChung",
+    [22.398,114.322],[22.396,114.335],[22.392,114.342],[22.386,114.350],
+    [22.380,114.356],[22.375,114.362],[22.370,114.368],"eastDam"],color:"#fb923c",dash:"8,6",w:2.5,op:.55},
+  {label:"🥾 徒步",pts:["eastDam",
+    [22.361,114.373],[22.359,114.377],"poPinChai",
+    [22.359,114.377],[22.361,114.373],"eastDam",
+    [22.363,114.372],[22.367,114.373],[22.371,114.375],"longKe",
+    [22.375,114.377],[22.380,114.378],[22.384,114.376],"saiWanShan",
+    [22.387,114.376],[22.390,114.375],"chaiKengTung",
+    [22.393,114.374],[22.396,114.373],"taiLongWan",
+    [22.400,114.374],[22.404,114.375],[22.407,114.376],"hamTin"],color:"#2dd47b",dash:null,w:4,op:.85},
+  {label:"🔙 折返备选",pts:["longKe",[22.371,114.375],[22.367,114.373],[22.363,114.372],"eastDam"],color:"#f87171",dash:"4,8",w:2,op:.4},
+],
+stops:[
+{time:"出发前",emoji:"📋",name:"⚠️ 出发前必查清单",fly:"szStation",zoom:14,
+ detail:"出发前3天逐项检查，打勾确认",
+ reason:"五一高峰+户外露营+跨境行程，遗漏任何一项都可能影响整个旅途。这份清单是从血泪经验中提炼出来的",
+ tags:["⚠️ 务必检查","r","📋 出发前3天","o"],
+ ticket:"📱 证件+支付\n✅ 港澳通行证 — 检查签注有效期！过期无法过关\n✅ 身份证（高铁+飞机+过关备用）\n✅ 八达通 — 提前充值HK$300+（便利店/MTR可充·支付宝乘車碼备用）\n✅ 港币现金 — 带HK$500+零钱（咸田湾士多/庙街小吃/深水埗老铺只收现金！）\n✅ 招行卡（Visa/Master）— 餐厅/咖啡店/紧急备用\n\n⛺ 露营装备\n✅ 帐篷（星河UL） + 蛋槽垫\n✅ 头灯 + 充电宝（≤2个·每个≤100Wh·可登机）\n✅ 防潮袋（手机+证件防水）\n✅ 驱蚊液 + 防晒霜（五月紫外线强）\n✅ 拖鞋/涉水鞋（快艇涉水上船）\n\n🥾 徒步装备\n✅ 徒步鞋（MH900/飞翼110·非防水夏季款）\n✅ 登山杖（下坡膝盖救星）\n✅ 速干衣裤 + 备用T恤\n✅ 雨衣/雨披（五月随时阵雨）\n✅ 2L水袋 + 电解质粉\n\n📱 预约+下载\n✅ 大馆 taikwun.hk 预约（5.4周一·至少提前3天）\n✅ 下载离线地图（Google Maps/高德·提前缓存西贡+市区）\n✅ 本网页手机版保存到手机（hk_trip_v5_mobile.html）\n\n🚨 紧急联系\n✅ 快艇 石先生 9834 6556（SK143牌照）\n✅ 香港报警 999 · 急救 999\n✅ 内地紧急 112\n✅ Hop Inn 前台电话提前查"},
+{time:"4.30 晚",emoji:"🚄",name:"上海出发→深圳",fly:"szStation",zoom:14,
+ detail:"火车/高铁过夜 · 5.1凌晨05:00到深圳站",
+ reason:"过夜火车省一晚住宿，凌晨到深圳直接过关，完美衔接第一天的户外行程"},
+{time:"05:00-05:30",emoji:"🛃",name:"罗湖过关",fly:"luohu",zoom:15,
+ detail:"凌晨人少 ~20min · 港澳通行证+签注\n💡 过关后立刻在罗湖站客服中心买八达通（HK$150含HK$100储值）或用支付宝乘車碼",
+ reason:"凌晨5点过关几乎零排队，平时要排1h+，这是全天最空的时段",
+ tags:["⏰ 凌晨零排队","g"]},
+{time:"05:40-06:10",emoji:"🚇",name:"东铁线→大学站",fly:"university",zoom:14,
+ detail:"罗湖→大学站 约30min · HK$36 · 首班05:55",
+ reason:"大学站是离麦径起点最近的铁路站，比到大埔站近40%车程",
+ ticket:"八达通刷卡 / 支付宝乘車碼 · 无需预约",
+ alt:"万一错过东铁首班→的士罗湖→北潭涌 HK$250 / 的士罗湖→大学站 HK$180"},
+{time:"06:15-06:50",emoji:"🚕",name:"的士→北潭涌",fly:"pakTamChung",zoom:13,
+ detail:"清晨的士 ~25min HK$120 · NR9A首班07:00前到",
+ reason:"NR9A首班7点，打车提前到能赶第一班小巴上山，比等公交省30min",
+ alt:"备选① 96R假日巴士 钻石山→北潭涌 HK$15\n备选② 红色小巴 旺角→西贡 HK$25 → 转92巴士"},
+{time:"07:00-07:20",emoji:"🚌",name:"NR9A小巴→东坝",fly:"eastDam",zoom:15,
+ detail:"五一加密班次 · HK$13.1 · 20min · 北潭涌上车",
+ reason:"NR9A是唯一直达东坝的公共交通，五一加开班次，但7点前到才能抢到位",
+ alt:"NR9A排不上→步行北潭涌→东坝 7km/1.5h（备选但费时）"},
+{time:"07:30",emoji:"🚀",name:"徒步起点：东坝",fly:"eastDam",zoom:16,
+ detail:"S形防波堤 · 万宜水库 · 整装出发",
+ reason:"万宜水库东坝是联合国教科文组织认证的地质公园核心区，7000个锚形消波块+S形防波堤，全球仅此一处",img:'eastDam',imgCap:'东坝S形防波堤（7000个锚形消波块）'},
+{time:"08:00-09:30",emoji:"🏝️",name:"破边洲往返 3km",fly:"poPinChai",zoom:17,
+ detail:"海蚀拱门 · 六角柱 · 汇丰500取景地",
+ reason:"破边洲是1.4亿年前火山喷发形成的六角柱状节理，比北爱尔兰巨人堤更壮观，汇丰500元纸币取景地",
+ tags:["⚠️ 悬崖无护栏","r"],
+ alt:"天气差/风大→跳过破边洲，直接走浪茄方向（省1.5h）",
+ img:'poPinChai',imgCap:'破边洲海蚀柱（从东坝远眺）'},
+{time:"09:30-09:45",emoji:"🔙",name:"折返东坝",fly:"eastDam",zoom:16,
+ detail:"1.5km / 15min 快步返回"},
+{time:"09:45-10:30",emoji:"🏖️",name:"东坝→浪茄湾",fly:"longKe",zoom:16,
+ detail:"1.4km / 35min 下降 · 水泥坡",
+ reason:"浪茄湾被称为「香港马尔代夫」，水质清澈见底，全港最干净的沙滩之一，游客极少因只能徒步抵达",img:'longKe',imgCap:'浪茄湾（玻璃水沙滩）'},
+{time:"10:30-11:40",emoji:"⛰️",name:"浪茄→西湾山 314m",fly:"saiWanShan",zoom:15,
+ detail:"2.6km / 1h10min · 最硬爬升300m · 山顶360°海景",
+ reason:"全程最大挑战，但登顶后360°无遮挡海景是麦径最壮观的视觉奖励，天气好能远眺蚺蛇尖",
+ tags:["🔥 最难点","o"]},
+{time:"11:40-12:30",emoji:"🍹",name:"西湾山→大浪西湾",fly:"taiLongWan",zoom:16,
+ detail:"2.3km / 50min 下坡 · 午餐休整",
+ reason:"大浪西湾是「香港最美海湾」四湾之首，三面环山一面临海，沙滩长达200m，比任何市区海滩都干净",
+ food:[{n:"三星士多",d:"炒饭/公仔面 HK$40-50 · 冰可乐 HK$15",p:"仅收现金"}]},
+{time:"12:30-13:15",emoji:"⛺",name:"大浪西湾→咸田湾 🏕️",fly:"hamTin",zoom:17,
+ detail:"2.0km / 45min · 小海桥打卡",
+ reason:"咸田湾是麦径最经典的营地，背山面海，远离光污染，夜晚银河肉眼可见，日出直照帐篷"},
+{time:"13:15-21:30",emoji:"🌙",name:"扎营·士多晚餐·星空",fly:"hamTin",zoom:17,
+ detail:"避涨潮线后20m · 现金买饭 · 05:50日出\n📱 咸田湾有微弱4G信号（中国联通漫游可能无信号）· 出发前下载离线地图\n🔋 充电宝务必充满 · 帐篷里无电源",
+ reason:"在香港能野外扎营看星空的地方屈指可数，咸田湾是其中最原生态的——无电无网，只有海浪声",
+ img:'hamTin',imgCap:'咸田湾沙滩营地',
+ tags:["⚠️ 士多仅收现金","r","⛺ 沙滩营地","y"],
+ food:[{n:"Hoi Fung / Ham Tin Store",d:"炒饭/公仔面 HK$40-60 · 啤酒 HK$20 · 早餐 HK$30",p:"仅收现金！带HK$200+"}],
+ alt:"士多没开/关门→自带干粮（能量棒+坚果+自热饭）\n咸田湾有公用洗手间和冲身龙头（冷水）\n撤退方案：咸田湾→西湾亭 3km/1h → NR29→西贡 HK$25\n或→咸田湾→赤径→北潭凹 7.5km/3h → 94巴士→西贡"},
+]},
+
+{id:"d52",label:"5.2 🚤",title:"[周六] 日出 → 快艇回西贡 → 咖啡简餐 → 钻石山茶餐厅 → 入住Hop Inn → 庙街+维港",color:"#fbbf24",
+dayNum:"5.2",
+routes:[
+  {label:"🚤 快艇航线",pts:["hamTin",
+    [22.407,114.374],[22.404,114.368],[22.400,114.358],[22.396,114.348],
+    [22.392,114.335],[22.389,114.318],[22.387,114.300],[22.385,114.285],"saiKung"],color:"#a78bfa",dash:"10,5",w:3.5,op:.8},
+  {label:"🚌 92巴士→钻石山",pts:["saiKung",
+    [22.378,114.268],[22.370,114.258],[22.362,114.248],[22.355,114.238],
+    [22.348,114.228],[22.342,114.218],[22.338,114.208],"diamondHill"],color:"#fb923c",dash:"8,6",w:2.5,op:.5},
+  {label:"🚇 MTR→尖东",pts:["diamondHill",
+    [22.332,114.198],[22.325,114.188],[22.318,114.180],[22.312,114.176],
+    [22.305,114.174],[22.300,114.173],"hopInn"],color:"#fb923c",dash:"6,4",w:2,op:.5},
+  {label:"🏙️ 市区逛街",pts:["hopInn",
+    [22.298,114.172],[22.296,114.170],[22.295,114.168],"harbourCity",
+    [22.294,114.169],"victoriaHarbour"],color:"#fbbf24",dash:"6,4",w:3,op:.7},
+  {label:"🏮 庙街+回酒店",pts:["victoriaHarbour",
+    [22.295,114.170],[22.298,114.170],[22.302,114.170],"templeSt",
+    [22.300,114.171],[22.298,114.172],"hopInn"],color:"#fbbf24",dash:"6,4",w:2.5,op:.55},
+  {label:"🥾 徒步备选",pts:["hamTin",
+    [22.412,114.374],[22.417,114.368],[22.422,114.360],"chekKeng",
+    [22.428,114.348],[22.434,114.340],"pakTamAu"],color:"#0ea5c7",dash:null,w:3,op:.5},
+  {label:"🚐 NR29撤退",pts:["hamTin",
+    [22.404,114.372],[22.400,114.368],[22.397,114.363],"saiWanTing",
+    [22.395,114.350],[22.392,114.335],[22.389,114.310],[22.387,114.295],"saiKung"],color:"#fb923c",dash:"4,6",w:2,op:.35},
+],
+stops:[
+{time:"05:30-07:30",emoji:"🌅",name:"日出+拔营",fly:"hamTin",zoom:17,
+ detail:"05:50海面日出 · LNT无痕 · 士多早餐",
+ reason:"咸田湾朝东，太阳从海平面升起直照帐篷，这是市区酒店永远看不到的景象",
+ food:[{n:"咸田湾士多早餐",d:"即食面+奶茶 HK$35-45",p:"仅收现金"}]},
+{time:"08:00-08:30",emoji:"🚤",name:"咸田湾→联系快艇",fly:"hamTin",zoom:17,
+ detail:"士多老板帮忙叫船 · 涉水登船 · 17:00前有船\n⚠️ 涉水齐膝！穿拖鞋/涉水鞋上船 · 手机证件放防水袋 · 背包套防雨罩",
+ reason:"快艇沿西贡海岸线飞驰，从海上回望麦径山脉，视角和徒步完全不同，20分钟值回票价",
+ tags:["🚤 快艇推荐","g","⚠️ 需涉水上船","r"],
+ ticket:"无需预约 · 到达后士多叫船 · 按人头付现金 HK$150-160",
+ alt:"快艇停航（风浪大）→ 徒步方案：咸田湾→赤径→北潭凹 7.5km/3h → 94巴士→西贡\n备选轻装撤：咸田湾→西湾亭 3km → NR29→西贡 HK$25"},
+{time:"08:30-09:00",emoji:"🚤",name:"快艇→西贡码头",fly:"saiKung",zoom:14,
+ detail:"HK$150-160/人 · 20-30min · 沿海岸飞驰",
+ reason:"西贡被称为「香港后花园」，海滨长廊+渔船码头+海鲜街，是港人周末最爱去处",
+ tags:["🌊 海景快艇","s"],img:'saiKung',imgCap:'西贡海滨长廊'},
+{time:"09:00-10:00",emoji:"🚶",name:"西贡海滨长廊·散步洗尘",fly:"saiKung",zoom:16,
+ detail:"码头渔船+海滨公园+咖啡店 · 市场买水果补给",
+ reason:"刚从野外回到文明世界，海滨长廊吹海风散步是最好的过渡——左边渔船右边咖啡馆，一半渔港一半度假",
+ tags:["🌅 晨光海风","g"],
+ food:[{n:"西贡咖啡角",d:"手冲 HK$45 · 冻柠茶 HK$28",p:"可八达通"},
+       {n:"西贡市场水果",d:"芒果/榴莲/山竹 HK$20-40/斤",p:"仅收现金"}],
+ alt:"下雨→直接进咖啡店坐等雨停"},
+{time:"10:00-10:30",emoji:"☕",name:"西贡咖啡简餐",fly:"saiKung",zoom:16,
+ detail:"码头咖啡店坐坐 · 不在西贡吃海鲜——太贵且一人不划算",
+ reason:"西贡海滨咖啡店比海鲜餐厅便宜5倍，一杯咖啡+三明治慢慢吃，看渔船晒太阳，省钱又惬意",
+ tags:["☕ 咖啡简餐","g","💰 省钱","s"],
+ food:[{n:"西贡咖啡角",d:"手冲咖啡 HK$40-50 · 冻柠茶 HK$28",p:"可八达通"},
+       {n:"Sai Kung Cafe",d:"全日早餐 HK$60-80 · 三明治 HK$45 · 沙拉 HK$55",p:"可信用卡"},
+       {n:"码头小食档",d:"鱼蛋 HK$10/串 · 烧卖 HK$10/串 · 肠粉 HK$15",p:"仅收现金"}],
+ alt:"想吃海鲜→六福单点豆腐$80+鱼汤$120=$200（最省方案）\n想坐海景→洪记点心$120-180（10:00开门·虾饺烧卖3-4碟）"},
+{time:"10:30-11:00",emoji:"🍦",name:"西贡码头拍照+芒果糯米糍",fly:"saiKung",zoom:17,
+ detail:"码头拍照告别西贡 · 芒果糯米糍 · 鱼蛋串",
+ reason:"西贡是慢节奏小镇，别急着走——海滨长廊看渔船，吃个糯米糍再出发",
+ food:[{n:"西贡芒果糯米糍",d:"HK$15-20/个 · 街头手作",p:"仅收现金"},
+       {n:"小食档鱼蛋/烧卖",d:"HK$10-15/串",p:"仅收现金"}]},
+{time:"11:00-12:00",emoji:"🚌",name:"92巴士→钻石山",fly:"hopInn",zoom:15,
+ detail:"92: HK$7.9 40min · 巴士上看山景海景",
+ reason:"省钱关键：不在西贡吃海鲜！到钻石山转车时吃港式茶餐厅，同样的钱吃3倍",
+ tags:["💰 省钱路线","y"]},
+{time:"12:00-13:00",emoji:"🍜",name:"钻石山·港式茶餐厅午餐",fly:"hopInn",zoom:15,
+ detail:"钻石山站附近茶餐厅 · 本地人光顾 · 一人吃刚好",
+ reason:"钻石山是居民区，茶餐厅价格是旅游区的1/2——一份黯然销魂饭才$52，在西贡只够喝碗鱼汤",
+ tags:["💰 性价比","g","🍜 港式味道","y"],
+ food:[{n:"敏华冰厅 ⭐人气茶餐厅",d:"黯然销魂饭(叉烧滑蛋饭) HK$52 · 香脆奶油猪 HK$18 · 冻柠茶 HK$20 · 奶酱多 HK$16\n▸ 一人套餐：饭+饮品 = HK$60-75",p:"可信用卡 · 钻石山荷里活广场1楼 · 人均$60-80"},
+       {n:"银龙粉面茶餐厅",d:"鲜虾云吞面 HK$42 · 鱼蛋粉 HK$32 · 牛腩面 HK$45 · 冻奶茶 HK$18\n▸ 粉面+饮品 = HK$50-65",p:"可八达通 · 凤德村道 · 本地老店 · 人均$50-60"},
+       {n:"华嫂冰室 ⭐网红茶餐厅",d:"菠萝包 HK$14 · 番茄浓汤通粉 HK$42 · 沙嗲牛肉面 HK$45 · 冻奶茶 HK$20\n▸ 一人简餐 = HK$55-70",p:"可信用卡 · 荷里活广场附近 · 港岛也有分店"}],
+ ticket:"💡 对比：西贡海鲜一人$200+ vs 钻石山茶餐厅一人$50-80\n💡 茶餐厅午餐11:30-14:00有特价套餐，比单点便宜20%\n💡 钻石山是居民区·价格是旅游区的1/2到1/3\n💡 MTR钻石山站→转观塘线1站到黄大仙/2站到乐富",
+ alt:"想吃得更好→到尖东再吃（选择更多但稍贵）\n时间紧→巴士上吃干粮·到酒店附近再吃"},
+{time:"13:00-13:30",emoji:"🚇",name:"MTR钻石山→尖东",fly:"hopInn",zoom:14,
+ detail:"观塘线→太子→荃湾线→尖沙咀·约20min·HK$8",
+ reason:"吃完美味茶餐厅再转地铁去酒店，省钱又省心"},
+{time:"13:30-14:30",emoji:"🧳",name:"Hop Inn寄存行李·等入住",fly:"hopInn",zoom:16,
+ detail:"先到酒店寄存行李 → 15:00 check-in · 周边逛逛",
+ reason:"15:00前可以先寄存行李，在尖东周边随便逛逛，不用拖着行李到处跑",
+ tags:["⏰ 15:00入住","y"]},
+{time:"15:00-15:30",emoji:"🏨",name:"入住Hop Inn·洗澡·洗装备",fly:"hopInn",zoom:16,
+ detail:"Mody Road · 3晚（5.2-5.4）· 热水澡！",
+ reason:"徒步16km+快艇+海鲜大餐后，热水澡是人生最幸福的时刻——Hop Inn步行5分钟到维港",
+ tags:["y"]},
+{time:"16:00-18:00",emoji:"🌅",name:"星光大道+K11屋顶观景台+海滨",fly:"victoriaHarbour",zoom:16,
+ detail:"酒店出门→Mody Rd直走5min→尖东海滨→左转步行3min到星光大道 · K11六楼免费观景台 · 全程步行不用坐车",
+ reason:"K11六楼有个隐藏的免费观景台，比星光大道人少10倍，维港全景无遮挡——这才是懂行人的私藏机位",
+ tags:["🚶 步行8min","g","🆓 不花钱","s"],
+ alt:"天气不好→K11室内随便逛逛（免费空调+艺术装置）\n或→尖东海滨平台花园（尖东P1出口·免费·人更少）"},
+{time:"17:30-18:30",emoji:"🏮",name:"庙街夜市·逛街+小吃",fly:"templeSt",zoom:17,
+ detail:"🚶 星光大道→步行沿弥敦道北行15min到庙街（或MTR尖东→油麻地C出口 HK$5·5min）\n17点开档 · 煲仔饭/牛杂/算命摊 · 先逛再吃 · 避开19-21高峰",
+ reason:"庙街是香港唯一保留传统夜市氛围的地方——霓虹灯牌、算命摊、大排档，王家卫电影里的香港就在这里",
+ tags:["🔥 17点错峰到","o"],img:'templeSt',imgCap:'庙街夜市霓虹灯牌',
+ alt:"庙街还没开档→先逛佐敦/油麻地一带街景\n庙街不感兴趣→回酒店休息一下再出来看灯光秀"},
+{time:"18:30-19:30",emoji:"🍲",name:"庙街晚餐",fly:"templeSt",zoom:17,
+ detail:"逛完坐下吃 · 兴记煲仔饭/牛杂",
+ reason:"兴记煲仔饭开了50+年，炭火慢煮+酱油焦香锅巴，是庙街最地道的味道，不是游客版是本地人版",
+ tags:["⚠️ 部分仅收现金","r"],
+ food:[{n:"兴记煲仔饭",d:"排骨煲仔饭 HK$55 · 滑鸡煲仔饭 HK$50",p:"仅收现金"},
+       {n:"庙街牛杂",d:"牛杂碗 HK$35-45 · 鱼蛋 HK$10/串",p:"仅收现金"}],
+ alt:"兴记排队→志记煲仔饭（同街）\n或→佐敦附近茶餐厅"},
+{time:"20:00-21:00",emoji:"🌉",name:"维多利亚港·幻彩咏香江",fly:"victoriaHarbour",zoom:16,
+ detail:"🚶 庙街→步行沿弥敦道南行10min回到尖沙咀海滨长廊（或MTR油麻地→尖东P1出口 HK$5·5min）\n20:00灯光秀(免费) · 对岸中环灯光 · 看完步行8min回酒店",
+ reason:"维港灯光秀被CNN评为「全球三大夜景」之一，44栋摩天大楼同步灯光表演，只有亲临才能感受那种震撼",
+ tags:["🌌 20:00灯光秀","s"],
+ alt:"下雨→K11 Musea 商场室内观景台（免费）\n灯光秀取消→海港城5楼观景台照样看维港"},
+]},
+
+{id:"d53",label:"5.3 ⛰️",title:"[周日⚠️] 尖东早茶 + 艺术馆 + 太平山步行上下山 + 夜景 + 天星夜渡",color:"#e879f9",
+dayNum:"5.3",
+routes:[
+  {label:"🥾 步行上山（旧山顶道）",pts:["hopInn",
+    [22.298,114.172],[22.296,114.170],[22.295,114.168],"harbourCity",
+    [22.294,114.165],[22.293,114.160],"centralFerry",
+    [22.286,114.158],[22.282,114.158],[22.280,114.160],"oldPeakRd",
+    [22.278,114.158],[22.276,114.155],[22.274,114.152],
+    [22.273,114.149],[22.272,114.147],"thePeak"],color:"#e879f9",dash:"6,4",w:3,op:.7},
+  {label:"🥾 步行下山（夏力道）",pts:["thePeak",
+    [22.273,114.148],[22.274,114.145],[22.276,114.143],
+    [22.278,114.145],[22.280,114.148],[22.282,114.152],
+    [22.284,114.155],[22.288,114.157],[22.291,114.156],"centralFerry"],color:"#c084fc",dash:"6,4",w:3,op:.7},
+  {label:"⛴️ 天星小轮夜渡",pts:["centralFerry",
+    [22.294,114.160],[22.295,114.165],[22.296,114.170],"tsimShaTsui",
+    [22.296,114.172],"hopInn"],color:"#e879f9",dash:"6,4",w:2.5,op:.55},
+],
+stops:[
+{time:"09:00-10:15",emoji:"🥟",name:"尖东早茶·一盅两件",fly:"hopInn",zoom:16,
+ detail:"酒店步行5min→尖沙咀茶楼 · 9点前到免排队 · 吃完步行10min去艺术馆",
+ reason:"莲香居在上环，从尖东过去要坐MTR太绕路——尖沙咀本身就有好几家传统茶楼，吃完直接走路去艺术馆，顺路不折腾",
+ tags:["⏰ 9点前错峰","g"],
+ food:[{n:"🥇 稻香（尖沙咀）",d:"虾饺 HK$38 · 烧卖 HK$32 · 肠粉 HK$28 · 叉烧包 HK$22 · 人均~HK$80\n尖沙咀亚士厘道（MTR尖沙咀站B2出口）\n⏰ 周一至日 07:00-00:00",p:"可八达通"},
+       {n:"🥈 美心皇宫（尖沙咀）",d:"手推车点心 · 虾饺HK$42 · 蛋挞HK$28 · 人均~HK$90\n尖沙咀弥敦道（新世界中心）\n⏰ 周一至日 07:30-23:00",p:"可八达通 · 传统推车"},
+       {n:"🥉 翠韵轩（尖东）",d:"点心套餐 ~HK$75\n尖东科学馆道（离酒店最近）\n⏰ 周一至日 07:00-22:00",p:"可八达通"}],
+ ticket:"💡 尖东→尖沙咀茶楼步行5-8min · 吃完直接走去艺术馆10min · 不用坐车",
+ alt:"想吃莲香居（上环）→MTR尖东→上环 HK$12 · 15min · 但会多花40min来回交通\n或→酒店楼下便利店面包+咖啡快速解决"},
+{time:"10:30-12:00",emoji:"🎨",name:"香港艺术馆+1881 Heritage",fly:"harbourCity",zoom:16,
+ detail:"🚶 茶楼步行10min→尖沙咀海滨→香港艺术馆(免费) · 1881 Heritage殖民建筑 · 不逛商场看文化",
+ reason:"香港艺术馆2026年全新常设展+维港海景窗——在展厅里看画，窗外就是维港，全港唯一。1881是前水警基地改的百年建筑，免费拍照绝佳",
+ tags:["🆓 免费","g","📸 拍照绝佳","s"],
+ alt:"艺术馆不感兴趣→尖东海滨平台花园（P1出口·免费·维港海景无遮挡）\n或→太空馆（HK$10·球幕电影·隔壁就是艺术馆）"},
+{time:"12:15-13:00",emoji:"🍜",name:"中环午饭·补充体力",fly:"centralFerry",zoom:16,
+ detail:"天星小轮尖沙咀→中环 HK$4.5 · 5min → 步行5min到结志街/美轮街一带",
+ reason:"步行上山前吃顿饱饭很重要——中环结志街到美轮街这一片全是老字号，兰芳园+胜香园+泰昌饼家步行距离不到200米，吃完直接走去花园道上山",
+ food:[{n:"🥇 一乐烧鹅（首选·周日开！）",d:"烧鹅脾濑粉 HK$68 · 烧鹅脾饭 HK$58 · 叉烧饭 HK$48\n中环士丹利街34号 · 米其林一星\n⏰ 每天 11:00-21:30 · 周日照常营业！\n📍 中环站D2出口步行3min",p:"可八达通"},
+       {n:"🥈 沾仔记云吞（快餐·周日开！）",d:"云吞面 HK$42 · 三拼面（云吞+牛腩+鱼蛋）HK$58\n中环威灵顿街98号\n⏰ 每天 11:00-21:00 · 周日照常！\n📍 中环站D2出口步行2min",p:"可八达通"},
+       {n:"🥉 泰昌饼家（甜品外带·每天开）",d:"曲奇蛋挞 HK$12/个 · 沙翁 HK$10/个 · 菠萝包 HK$10\n→ 2个蛋挞+1个沙翁 HK$34（边走边吃）\n中环摆花街35号 · 1954年创立 · 末代港督彭定康最爱\n⏰ 每天 07:30-21:00\n📍 中环站D2出口步行2min",p:"可八达通 · 外带为主"}],
+ ticket:"⚠️ 5.3是周日！胜香园+兰芳园都休息！\n💡 推荐组合：一乐烧鹅饭吃饱（HK$58）→ 泰昌买2个蛋挞路上吃（HK$24）\n合计约 HK$82 · 米其林+百年饼家\n三家店在士丹利街/威灵顿街/摆花街，步行3min内互达",
+ alt:"一乐排太长→沾仔记三拼面HK$58（隔壁街·排队快）\n或→太古广场美食广场（花园道缆车站旁·选择多）"},
+{time:"13:00-14:00",emoji:"🥾",name:"旧山顶道步行上山",fly:"oldPeakRd",zoom:16,
+ detail:"🚶 午饭区→步行10min沿花园道走到缆车站旁的旧山顶道入口\n石阶+柏油路 · 约2.5km/45-60min · 沿途有树荫",
+ reason:"旧山顶道（Old Peak Road）是香港最经典的登山路线——石阶穿过百年古树，沿途能看到缆车轨道和半山豪宅，走过麦径D1的你完全不在话下",
+ tags:["🆓 免费","g","🥾 2.5km/45min","s"],
+ ticket:"无需购票 · 起点在缆车站旁花园道 · 路况好全程有路灯\n省缆车排队30-60min + 省HK$62往返票",
+ alt:"体力不够→15号巴士 中环码头→山顶 HK$12 · 25min\n或→山顶缆车 HK$62往返 · Klook提前购票"},
+{time:"14:00-15:30",emoji:"⛰️",name:"山顶拍照+休息",fly:"thePeak",zoom:16,
+ detail:"360°维港全景 · 山顶广场免费观景台 · 先在白天把照片拍够",
+ reason:"太平山顶是全世界最贵住宅区之一，从552m高处俯瞰维港，这是香港的标志画面——每张明信片都从这里拍",
+ img:'victoriaPeak',imgCap:'太平山顶看维港全景',
+ ticket:"摩天台428 成人HK$75（可选）· 免费观景台已经够好\n蜡像馆 HK$280（不值）→不如走卢吉道看真实维港",
+ alt:"山顶大雾看不清→改去K11 Musea / M+博物馆\n下雨→山顶商场内逛+咖啡照样OK"},
+{time:"15:30-17:00",emoji:"🥾",name:"卢吉道环山步行径",fly:"thePeak",zoom:15,
+ detail:"山顶广场出发→卢吉道（西行）→悬崖栈道全程维港180°全景 · ~3.5km · 平缓无台阶",
+ reason:"卢吉道号称「每一步都值一百万」——悬崖栈道凌空挂在半山，左手边是整个维港+九龙半岛无遮挡全景，右手边是百年古树。全程平路零台阶，走过麦径的你就是散步",
+ tags:["🆓 免费","g","🥾 3.5km/1.5h","s"],
+ alt:"走半程30min原路返回也可以，精华段在前半段"},
+{time:"17:00-18:50",emoji:"☕",name:"山顶歇脚·等日落",fly:"thePeak",zoom:16,
+ detail:"山顶广场找个座位坐下来休息 · 山顶Café Deco或Pacific Coffee补充能量",
+ reason:"卢吉道走完回到山顶正好歇歇，17点到日落18:50还有快两小时，喝杯咖啡看天色渐变。五月的太平山顶傍晚温度宜人，不冷不热",
+ tags:["☕ 补充能量","o"],
+ alt:"不想等→直接夏力道走下山，白天下山也OK"},
+{time:"18:50-19:20",emoji:"🌃",name:"太平山顶夜景",fly:"thePeak",zoom:16,
+ detail:"5月日落~18:50 · 19:15两岸灯火全亮 · 免费观景台最佳位置",
+ reason:"太平山百万夜景——整个维港从金色变成紫色再变成满城灯火，这是世界三大夜景之一。白天来过的人都说：夜景才是太平山的灵魂",
+ tags:["🌃 世界三大夜景","g"],img:'victoriaPeak',imgCap:'太平山顶百万夜景',
+ alt:"大雾看不到→直接下山，改去尖沙咀海滨看灯光秀"},
+{time:"19:20-20:15",emoji:"🥾",name:"夏力道步行下山→花园道",fly:"oldPeakRd",zoom:15,
+ detail:"夏力道→花园道 · ~2.5km · 45-60min · 全程铺装路面+路灯+护栏 · 夜走安全",
+ reason:"下山走夏力道，和上山的旧山顶道完全不同路线——穿过山顶树林缓坡下行，有路灯不用头灯，走完到花园道MTR金钟站旁边",
+ tags:["🆓 免费","g","💡 有路灯","s"],
+ alt:"不想走路→等15号末班巴士（约22:00末班）或叫的士HK$50-60下山"},
+{time:"20:30-21:00",emoji:"⛴️",name:"天星小轮·夜渡维港",fly:"centralFerry",zoom:17,
+ detail:"🚶 花园道下山终点→步行5min到中环天星码头（7号码头）\n中环码头→尖沙咀 · HK$4.5 · 8min · 两岸灯火璀璨的维港夜渡\n⚠️ 5.3是周日！天星小轮末班约22:30 · 20:30出发时间充裕",
+ reason:"天星小轮1880年运营至今，HK$4.5是全世界最便宜的跨海渡轮——夜晚坐在上层甲板，两岸摩天大楼的灯光倒映在海面上，比白天更震撼。国家地理评为「人生50个必到」之一",
+ tags:["🌃 夜景加成","g"],
+ alt:"天星小轮太挤→MTR金钟→尖东 · 10min",
+ img:'starFerry',imgCap:'天星小轮夜渡维港'},
+{time:"21:15-22:00",emoji:"🍲",name:"尖东宵夜",fly:"hopInn",zoom:16,
+ detail:"🚶 天星小轮到尖沙咀码头→步行10min沿梳士巴利道→Mody Rd→酒店附近\n吃完就回去休息 · 连走三天腿需要恢复",
+ reason:"走了一整天+夜登太平山，这顿是犒劳自己——酒店附近随便吃，不折腾",
+ food:[{n:"华嫂冰室（尖东）",d:"菠萝包 HK$18 · 番茄浓汤通粉 HK$42 · 冻奶茶 HK$18",p:"可八达通 · 离酒店最近 · 营业到23:00"},
+       {n:"翠华餐厅（尖东）",d:"鱼蛋河 HK$52 · 奶油猪仔包 HK$22 · 冰镇奶茶 HK$28",p:"可八达通 · 24小时营业"},
+       {n:"一兰拉面（尖沙咀）",d:"拉面 HK$98 · 追加叉烧 HK$28",p:"可八达通 · 24小时 · 一个人吃也不尴尬"}],
+ alt:"累到不想走→酒店楼下便利店买面包+饮料回房间"},
+]},
+
+{id:"d54",label:"5.4 🎨",title:"[周一] 坚尼地城 + 中环文艺 + 深水埗美食 + 旺角夜市",color:"#38bdf8",
+dayNum:"5.4",
+routes:[
+  {label:"🎨 港岛段",pts:["hopInn",
+    [22.298,114.172],[22.296,114.170],[22.294,114.165],
+    [22.290,114.158],[22.286,114.152],[22.284,114.145],
+    [22.283,114.138],[22.283,114.132],"kennedyTown",
+    [22.283,114.138],[22.282,114.145],[22.282,114.150],"taiKwun",
+    [22.282,114.153],"centralEscalator",
+    [22.283,114.151],"goughSt",
+    [22.282,114.153],"pMQ"],color:"#38bdf8",dash:"6,4",w:3,op:.7},
+  {label:"🏘️ 深水埗+旺角",pts:["pMQ",
+    [22.284,114.155],[22.290,114.158],[22.296,114.162],
+    [22.305,114.165],[22.312,114.164],[22.320,114.163],
+    [22.326,114.162],"shamShuiPo",
+    [22.324,114.167],[22.322,114.170],"mongKok",
+    [22.316,114.172],[22.310,114.173],[22.304,114.173],
+    [22.300,114.172],"hopInn"],color:"#38bdf8",dash:"6,4",w:2.5,op:.55},
+],
+stops:[
+{time:"08:00-09:30",emoji:"🌅",name:"坚尼地城海旁·%Arabica",fly:"kennedyTown",zoom:16,
+ detail:"🚇 MTR尖东→金钟（荃湾线）→换港岛线→坚尼地城A出口 · HK$12 · 25min\n海边咖啡打卡 · 穷富翁壁涂鸦 · 海旁长廊散步",
+ reason:"坚尼地城是港岛最西端，近年才通地铁，保留了老香港渔村风貌+无敌海景，%Arabica的落地窗直面维港西口日落",
+ tags:["⏰ 8点错峰拍照无路人","g","☕ HK$45-60","s"],
+ food:[{n:"% Arabica",d:"西班牙拿铁 HK$52 · 抹茶拿铁 HK$55 · 焦糖拿铁 HK$52",p:"可信用卡/支付宝"}],
+ ticket:"无需预约 · 咖啡店08:00开门",
+ alt:"%Arabica排队→COFFEE Academics · 同样海景\n或→先逛海旁长廊拍照，回程再买咖啡"},
+{time:"09:30-10:00",emoji:"🚋",name:"叮叮车→中环",fly:"kennedyTown",zoom:16,
+ detail:"坚尼地城→中环 · 2层前排维港海景位 · 非高峰易上车",
+ reason:"叮叮车1904年运行至今，是全球最古老的双层电车，HK$3.2坐全程——二层前排维港海景位，比观光巴士便宜100倍",
+ tags:["🚋 必坐体验","g","HK$3.2","s"],
+ alt:"叮叮车太慢→MTR港岛线 坚尼地城→中环 4站 HK$5 · 8min"},
+{time:"10:00-11:30",emoji:"🏛️",name:"大馆 Tai Kwun",fly:"taiKwun",zoom:17,
+ detail:"🚶 叮叮车中环站下车→步行沿荷李活道上行5min到大馆正门\n前中区警署+域多利监狱 · 旋转楼梯 · 监狱牢房",
+ reason:"大馆由1841年的警署+监狱活化而成，在牢房里喝咖啡、在操场上听爵士乐——这种时空错位感全世界只有这里有",
+ tags:["⏰ 开馆即到人最少","g","🆓 免费","s"],
+ img:'taiKwun',imgCap:'大馆监狱操场（红砖墙+铁窗）',
+ ticket:"🎫 免费！但需预约 → 官网 taikwun.hk 提前预约\n五一假期人多，建议至少提前3天预约\nKlook也可搜'Tai Kwun'免费预约",
+ alt:"预约满了→现场排队候补（通常等15-30min）\n或→荷李活道公园（免费·涂鸦墙·隔壁就是大馆外墙）"},
+{time:"11:30-12:15",emoji:"🪜",name:"半山扶梯+SoHo",fly:"centralEscalator",zoom:17,
+ detail:"🚶 大馆正门出来→右转荷李活道步行3min→半山扶梯入口（皇后大道中/阁麟街口）\n世界最长户外扶梯 · 重庆森林取景地 · SoHo街头涂鸦 · 小画廊",
+ reason:"800m长的半山扶梯是重庆森林里梁朝伟每天坐的那条——扶梯穿过旧楼、涂鸦墙、小酒馆，是中环最迷人的城市切片",
+ alt:"扶梯维修/停运→走楼梯也一样（就是累点）· 沿途很多咖啡店可歇脚"},
+{time:"12:15-13:15",emoji:"🍜",name:"午餐：九记牛腩",fly:"goughSt",zoom:17,
+ detail:"🚶 扶梯下来→步行3min沿歌赋街到21号（在SoHo区域内，不用走远）\n12:30开店前5min到排队最短",
+ reason:"九记是全港最牛的牛腩店——蔡澜推荐、周润发常来，咖喱牛筋腩炖8小时，牛筋入口即化，排队1h也值得",
+ tags:["⏰ 开店前到","o","💰 HK$70-100","s"],
+ food:[{n:"九记牛腩",d:"咖喱牛筋腩伊面 HK$72 · 清汤牛腩河 HK$62 · 上汤牛腩伊面 HK$62 · 牛腩咖喱饭 HK$68",p:"可八达通 · 12:30-20:30 · 周日休息但5.4是周一✅"},
+       {n:"一乐烧鹅（备选）",d:"烧鹅脾濑粉 HK$68 · 烧鹅脾饭 HK$58 · 叉烧饭 HK$48",p:"可八达通 · 周日开！米其林一星"}],
+ ticket:"无需预约 · 排队点餐",
+ alt:"⚠️ 九记周日休息！→ 一乐烧鹅（士丹利街34号 · 步行5min）\n排队太长→沾仔记云吞面（同区域· HK$42 · 10min排到）"},
+{time:"13:30-14:30",emoji:"🎨",name:"PMQ元创方",fly:"pMQ",zoom:17,
+ detail:"🚶 九记出来→歌赋街往西走→右转鸭巴甸街→步行5min到PMQ正门（鸭巴甸街35号）\n活化荷李活道警察宿舍 · 文创小店+手作+设计书店",
+ reason:"PMQ是1951年的已婚警察宿舍改造，保留了对称走廊+格子间格局，现在入驻的全是独立设计师——全港最有格调的文创基地",
+ tags:["🆓 免费","s"],
+ ticket:"免费入场 · 部分工作坊需预约（官网 pmq.org.hk）",
+ alt:"PMQ不感兴趣→步行5min到文武庙（上环·免费·百年庙宇）\n或→Cat Street 摩罗上街（古董街·淘宝）"},
+{time:"14:45-15:00",emoji:"🚇",name:"MTR中环→深水埗",fly:"shamShuiPo",zoom:17,
+ detail:"荃湾线 中环→深水埗 6站 · HK$8 · 15min"},
+{time:"15:00-16:30",emoji:"🏘️",name:"深水埗·怀旧街区",fly:"shamShuiPo",zoom:17,
+ detail:"鸭寮街跳蚤市场 · 桂林街老铺 · 全港最市井 · 游客极少",
+ reason:"深水埗是香港最真实的平民街区——没有游客陷阱，只有开了50年的老铺、卖二手货的鸭寮街、HK$8的白糖糕，这才是港片里的香港",
+ tags:["📸 怀旧打卡·不挤","g"],img:'shamShuiPo',imgCap:'深水埗街头（最市井的香港）'},
+{time:"16:30-17:30",emoji:"🍡",name:"深水埗小吃巡礼",fly:"shamShuiPo",zoom:17,
+ detail:"一站吃遍港式经典 · 下午不排队",
+ reason:"深水埗是全港小吃密度最高的街区——4条街8家老字号，HK$50吃撑，米其林必比登推荐比米其林星更接地气",
+ tags:["💰 HK$50-80","s","⚠️ 部分仅收现金","r"],
+ food:[{n:"坤记糕品",d:"白糖糕 HK$8 · 红豆糕 HK$8 · 芝麻卷 HK$10",p:"仅收现金"},
+       {n:"公和荳品厂",d:"豆腐花 HK$12 · 煎酿豆腐 HK$15 · 豆浆 HK$10",p:"仅收现金"},
+       {n:"刘森记面家",d:"虾籽捞面 HK$42 · 云吞面 HK$38 · 牛腩面 HK$45",p:"可八达通"},
+       {n:"合益泰小食",d:"肠粉(酱+芝麻) HK$8 · 鱼蛋 HK$10",p:"仅收现金"}],
+ alt:"某店关门→隔壁一定有替代 · 深水埗老铺密度全港最高\n鸭寮街15:00后才热闹（早了摊位没开完）"},
+{time:"17:30-18:30",emoji:"🏮",name:"旺角·花园街+金鱼街+Gregory",fly:"mongKok",zoom:16,
+ detail:"🚇 MTR深水埗→旺角 1站 · HK$4 · 3min（或步行沿大埔道/长沙湾道走15min）\n花园街市集 · 金鱼街 · 波鞋街 · 霓虹灯牌拍照",
+ reason:"旺角是全球人口密度最高的街区，霓虹灯牌+街头小吃+人潮涌动——这就是赛博朋克的现实版本，入夜后氛围拉满",
+ tags:["⏰ 17:30比晚上好","g"],
+ alt:"花园街收摊早(~19:00) → 先逛花园街再去金鱼街\n雨天→朗豪坊商场（室内·旺角站上盖）",
+ img:'mongKok',imgCap:'旺角霓虹灯牌夜色',
+ ticket:"🎒 Gregory背包店→The Overlander 旺角·荷李活商业中心12楼\nMTR旺角站E2出口·沿弥敦道走5min\n营业11:00-21:00 · 全港Gregory总代理·款式最全\n蜂鸟Nano 16-28L HK$400-600 · 驰/溯系列 30-55L HK$1000-1800\n买满HK$1800送配件·比内地便宜15-25%"},
+{time:"18:30-20:00",emoji:"🍲",name:"旺角街头晚餐",fly:"mongKok",zoom:17,
+ detail:"19点前比20点少人 · 吃完→🚇 MTR旺角→尖东 3站 · HK$6 · 8min回酒店",
+ reason:"旺角晚餐是整个行程的味觉高潮——肥姐卤味排长队但值得，金华菠萝油刚出炉酥到掉渣，18座狗仔粉米其林推荐HK$30",
+ tags:["💰 HK$60-100","s"],
+ food:[{n:"金华冰厅",d:"菠萝油 HK$14 · 鲜油菠萝包 HK$13 · 西多士 HK$22 · 冻奶茶 HK$16",p:"可八达通"},
+       {n:"肥姐小食店",d:"大墨鱼 HK$25 · 生肠 HK$20 · 卤味拼盘 HK$30",p:"仅收现金 · 旺角排队王"},
+       {n:"18座狗仔粉",d:"狗仔粉 HK$30 · 火鸭翅 HK$35",p:"仅收现金 · 米其林推荐"}],
+ alt:"肥姐排太长→隔壁/附近任意茶餐厅（旺角遍地都是）\n或→登打士街小吃街（鸡蛋仔+格仔饼+烧卖）"},
+]},
+
+{id:"d55",label:"5.5 ✈️",title:"[周二] 退房 → 西九龙高铁13:30 → 深圳北 → 宝安飞上海",color:"#fb923c",
+dayNum:"5.5",
+routes:[
+  {label:"🚶 步行→西九龙",pts:["hopInn",
+    [22.298,114.172],[22.300,114.170],[22.302,114.168],[22.303,114.166],"westKowloon"],color:"#fb923c",dash:"6,4",w:2.5,op:.6},
+  {label:"🚄 高铁",pts:["westKowloon",
+    [22.315,114.155],[22.345,114.130],[22.395,114.105],
+    [22.450,114.085],[22.510,114.055],[22.560,114.038],"shenzhenNorth"],color:"#f87171",dash:"8,4",w:3.5,op:.8},
+  {label:"🚇 深圳北→机场",pts:["shenzhenNorth",
+    [22.590,114.035],[22.580,114.018],[22.565,114.000],
+    [22.555,113.975],[22.548,113.955],[22.540,113.940],"szStation"],color:"#fb923c",dash:"4,6",w:2,op:.4},
+  {label:"🚖 的士备选→机场",pts:["shenzhenNorth",
+    [22.585,114.030],[22.570,114.010],[22.558,113.990],
+    [22.548,113.965],[22.540,113.945],"szStation"],color:"#a78bfa",dash:"4,8",w:2,op:.3},
+],
+stops:[
+{time:"08:00-09:00",emoji:"🥐",name:"最后一顿港式早餐",fly:"hopInn",zoom:16,
+ detail:"🚶 酒店→MTR尖东站步行5min→坐1站到佐敦C2出口→步行3min到白加士街47号\n澳洲牛奶公司 · 悠悠闲吃",
+ reason:"用一份炒蛋+炖奶收尾，比任何纪念品都好——这是离开前最后的港式味道，回上海就吃不到了",
+ food:[{n:"澳洲牛奶公司",d:"炒蛋+厚多士 HK$28 · 蛋白炖鲜牛奶 HK$28 · 奶茶 HK$16",p:"可八达通"},
+       {n:"美心皇宫（备选）",d:"点心推车 · 虾饺HK$48 · 烧卖HK$42 · 肠粉HK$28",p:"可八达通"}],
+ alt:"澳洲牛奶公司排队→佐敦附近茶餐厅随便一家都行\n或→酒店附近7-11买面包+咖啡赶路"},
+{time:"09:00-09:30",emoji:"🧳",name:"退房·整理行李",fly:"hopInn",zoom:16,
+ detail:"Hop Inn退房 → 打包帐篷装备 · 全部带走"},
+{time:"09:30-10:00",emoji:"🚶",name:"步行→西九龙站",fly:"westKowloon",zoom:16,
+ detail:"尖东→柯士甸 步行10min / MTR一站 · 西九龙就在酒店附近",
+ alt:"行李太多→的士 Hop Inn→西九龙 HK$30 · 5min"},
+{time:"10:00-11:30",emoji:"🏙️",name:"西九龙文化区",fly:"westKowloon",zoom:16,
+ detail:"M+博物馆外观 · 西九海滨长廊 · 维港最后看一眼",
+ reason:"西九海滨长廊是维港最佳告别点——面朝中环天际线，无人遮挡，用最后一张照片把维港带回家",
+ tags:["📸 免费海滨·人少","g"],
+ ticket:"M+博物馆 成人HK$120 · 特展HK$240（可选·11:00开馆）\n官网 mplus.org.hk · Klook搜'M+'有折扣\n海滨长廊+M+外观免费",
+ alt:"不想看展→海滨长廊拍照就够（免费·海景绝佳）\n或→圆方商场（西九龙站旁·逛街吹空调）"},
+{time:"11:30-12:00",emoji:"🍜",name:"站内午餐",fly:"westKowloon",zoom:17,
+ detail:"站内美食广场 · 12点前到人少",
+ reason:"站内吃饭节省时间又不用在外面找餐厅，高铁前最后一顿港式，吃饱上车正好眯一觉",
+ tags:["⏰ 12点前进站吃午餐","o","💰 HK$80-100","s"],
+ food:[{n:"翠华餐厅（站内）",d:"奶油猪仔包 HK$18 · 鱼蛋河粉 HK$42 · 冻奶茶 HK$16",p:"可八达通/信用卡"},
+       {n:"美心MX（站内）",d:"烧味饭 HK$48 · 茶餐厅套餐 HK$55",p:"可八达通/信用卡"}]},
+{time:"12:00-13:15",emoji:"🛃",name:"西九龙一地两检过关",fly:"westKowloon",zoom:17,
+ detail:"同一大楼办香港出境+内地入境 · 提前45-60min到 · 13:30发车\n⚠️ 五一返程高峰！建议12:00前进站 · 安检+出入境至少45min",
+ reason:"西九龙站是全球最大的地下高铁站，一地两检意味着不用拖着行李过两道关——这是深港跨境最丝滑的方式",
+ tags:["🚄 一地两检·无需两边跑","g"],img:'westKowloon',imgCap:'西九龙站候车大厅',
+ ticket:"🎫 已购票！高铁 G5614 13:30 西九龙→深圳北\n二等座 HK$75/¥68 · 约20min\n⚠️ 五一需提前60min到站安检过关"},
+{time:"13:30",emoji:"🚄",name:"高铁出发→深圳北",fly:"westKowloon",zoom:14,
+ detail:"西九龙→深圳北 · 20分钟直达！",
+ reason:"20分钟从香港到深圳——比从港岛到九龙还快，这是大湾区的速度",
+ tags:["⚡ 20分钟直达！","g"]},
+{time:"13:50",emoji:"🚉",name:"抵达深圳北",fly:"shenzhenNorth",zoom:14,
+ detail:"高铁出站 · 深圳北枢纽"},
+{time:"14:00-15:30",emoji:"🚇",name:"地铁5+11号线→宝安机场",fly:"shenzhenNorth",zoom:14,
+ detail:"深圳北→前海湾→11号线→机场 · ¥9/70min",
+ alt:"地铁太慢→的士 深圳北→宝安机场 ¥130/40min\n或→机场大巴330A 深圳北→机场 ¥20/50min"},
+{time:"16:00",emoji:"✈️",name:"抵达宝安机场",fly:"szStation",zoom:14,
+ detail:"值机+安检 · 提前90min · 17:30起飞"},
+{time:"17:30",emoji:"✈️",name:"宝安起飞→上海 🎉",fly:"szStation",zoom:14,
+ detail:"回家！五天满载而归 🎉"},
+]},
+];
+
+/* ─── 真实照片（Wikimedia Commons CC） ─── */
+const IMGS={
+  eastDam:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/High_Island_Reservoir_East_Dam_38.jpg/330px-High_Island_Reservoir_East_Dam_38.jpg',
+  eastDam2:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/High_Island_Reservoir_East_Dam_26.jpg/330px-High_Island_Reservoir_East_Dam_26.jpg',
+  poPinChai:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Po_Pin_Chau_1.jpg/330px-Po_Pin_Chau_1.jpg',
+  longKe:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Longke_Sai_Kung.jpg/330px-Longke_Sai_Kung.jpg',
+  hamTin:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Ham_Tin_Wan.jpg/330px-Ham_Tin_Wan.jpg',
+  saiKung:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Sai_Kung_Town.jpg/330px-Sai_Kung_Town.jpg',
+  peakTram:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Peak_Tram_Hong_Kong.jpg/330px-Peak_Tram_Hong_Kong.jpg',
+  victoriaPeak:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Hong_Kong_Night_Skyline.jpg/330px-Hong_Kong_Night_Skyline.jpg',
+  starFerry:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Star_Ferry_Pier_Central.jpg/330px-Star_Ferry_Pier_Central.jpg',
+  taiKwun:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Tai_Kwun_Prison_Yard_201806.jpg/330px-Tai_Kwun_Prison_Yard_201806.jpg',
+  shamShuiPo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Sham_Shui_Po.jpg/330px-Sham_Shui_Po.jpg',
+  templeSt:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/HK_%E4%BD%90%E6%95%A6_Jordan_%E5%BB%9F%E8%A1%97_Temple_Street_%E5%AF%A7%E6%B3%A2%E8%A1%97_Ning_Po_Street_%E5%A4%9C%E5%B8%82_night_market_May_2024_R12S_02.jpg/330px-HK_%E4%BD%90%E6%95%A6_Jordan_%E5%BB%9F%E8%A1%97_Temple_Street_%E5%AF%A7%E6%B3%A2%E8%A1%97_Ning_Po_Street_%E5%A4%9C%E5%B8%82_night_market_May_2024_R12S_02.jpg',
+  mongKok:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Mong_Kok_Neon_Signs_Night_%2848127904386%29.jpg/330px-Mong_Kok_Neon_Signs_Night_%2848127904386%29.jpg',
+  westKowloon:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/HK_West_kowloon_Station_Waiting_area.jpg/330px-HK_West_kowloon_Station_Waiting_area.jpg',
+};
+
+/* ─── 坐标点（Nominatim 2026-04 校准） ─── */
+const P={
+  szStation:[22.5328,114.1217], luohu:[22.5335,114.1188],
+  university:[22.4137,114.2103], diamondHill:[22.3354,114.2018],
+  pakTamChung:[22.3973,114.3190], eastDam:[22.3620,114.3715],
+  poPinChai:[22.3584,114.3785], longKe:[22.3743,114.3764],
+  saiWanShan:[22.3860,114.3730], chaiKengTung:[22.3920,114.3750],
+  taiLongWan:[22.3991,114.3728], hamTin:[22.4092,114.3754],
+  chekKeng:[22.4240,114.3530], pakTamAu:[22.4385,114.3380],
+  saiWanTing:[22.3960,114.3610], saiKung:[22.3815,114.2735],
+  hopInn:[22.2960,114.1720],
+  jordan:[22.3065,114.1695], templeSt:[22.3025,114.1700],
+  victoriaHarbour:[22.2930,114.1690], tsimShaTsui:[22.2950,114.1720],
+  harbourCity:[22.2945,114.1665], causewayBay:[22.2795,114.1840],
+  peakTram:[22.2765,114.1540], oldPeakRd:[22.2763,114.1590], thePeak:[22.2705,114.1460],
+  centralFerry:[22.2935,114.1550],
+  kennedyTown:[22.2824,114.1284], taiKwun:[22.2812,114.1540],
+  centralEscalator:[22.2820,114.1535], goughSt:[22.2835,114.1510],
+  pMQ:[22.2815,114.1530], shamShuiPo:[22.3290,114.1625],
+  mongKok:[22.3190,114.1695],
+  westKowloon:[22.3020,114.1653], shenzhenNorth:[22.6030,114.0300],
+  // 卫星可见地标（帮助定位）
+  eastDamWall:[22.3615,114.3705],     // 东坝S形防波堤（卫星可见白色结构）
+  highIslandWestDam:[22.3740,114.3280], // 万宜西坝（卫星可见长坝+溢洪道）
+  saiKungPier:[22.3815,114.2735],       // 西贡码头（卫星可见T形突堤）
+  victoriaPeakTower:[22.2759,114.1456], // 山顶凌霄阁（卫星可见圆顶建筑）
+  iccTower:[22.2950,114.1665],          // ICC环球贸易广场（尖沙咀最高楼）
+  twoIFC:[22.2925,114.1588],            // IFC国际金融中心（中环最高楼）
+  hkceC:[22.2845,114.1595],             // 会展中心（金紫荆广场·卫星可见弧形屋顶）
+  crossHarbourTunnel:[22.2935,114.1715],// 红磡海底隧道入口（卫星可见道路入海）
+};
+
+/* ─── 初始化地图 ─── */
+const map=L.map('map',{zoomControl:true,attributionControl:false}).setView([22.35,114.28],12);
+
+const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18});
+satellite.addTo(map);
+const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,opacity:.45});
+topo.addTo(map);
+const terrain=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17});
+const dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18});
+const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18});
+let baseIdx=0;const bases=[satellite,terrain,dark,osm];
+const baseNames=['🛰️ 卫星','🏔️ 地形','🌑 暗色','🗺️ 标准'];
+let currentBase=satellite;
+function switchBase(){
+  map.removeLayer(currentBase);if(map.hasLayer(topo))map.removeLayer(topo);
+  baseIdx=(baseIdx+1)%bases.length;currentBase=bases[baseIdx];currentBase.addTo(map);
+  if(baseIdx===0)topo.addTo(map);
+  const ind=document.getElementById('base-indicator');if(ind)ind.textContent=baseNames[baseIdx];
+}
+map.on('contextmenu',e=>{e.originalEvent.preventDefault();switchBase()});
+document.addEventListener('keydown',e=>{if(e.key==='d')switchBase()});
+
+/* ─── Q版标记图标 ─── */
+function makeQIcon(emoji,label,color){
+  return L.divIcon({className:'',
+    html:`<div class="qmarker"><span class="qemo">${emoji}</span><span class="qbubble" style="background:${color};color:#fff">${label}</span></div>`,
+    iconSize:[80,56],iconAnchor:[40,56],popupAnchor:[0,-56]});
+}
+
+/* ─── 当天图层管理 ─── */
+let dayMarkers=[];
+let dayLines=[];
+
+function clearDayLayers(){
+  dayMarkers.forEach(m=>map.removeLayer(m));
+  dayLines.forEach(l=>{
+    if(l._cleanArrows)l._cleanArrows();
+    map.removeLayer(l);
+  });
+  dayMarkers=[];dayLines=[];
+}
+
+/* ─── 箭头方向标识工具 ─── */
+function addArrows(latlngs, color, opacity){
+  // 把latlng数组转成像素距离累积数组，然后等间距插入箭头
+  const minPx=80; // 箭头最小像素间距
+  const arrowSize=10;
+
+  function getSegments(){
+    const segs=[];
+    for(let i=0;i<latlngs.length-1;i++){
+      const a=map.latLngToLayerPoint(L.latLng(latlngs[i]));
+      const b=map.latLngToLayerPoint(L.latLng(latlngs[i+1]));
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      segs.push({a,b,dist,angle:Math.atan2(dy,dx)*180/Math.PI,
+        latA:latlngs[i],latB:latlngs[i+1]});
+    }
+    return segs;
+  }
+
+  // 创建箭头层（每次zoom变化时重新计算位置）
+  const arrowLayer=L.layerGroup().addTo(map);
+  dayLines.push(arrowLayer);
+
+  function updateArrows(){
+    arrowLayer.clearLayers();
+    const segs=getSegments();
+    let accum=minPx*0.5; // 第一个箭头从中间开始
+    let totalPx=0;
+    segs.forEach(s=>totalPx+=s.dist);
+    if(totalPx<minPx)return; // 线太短不画
+
+    let walked=0;
+    for(let i=0;i<segs.length;i++){
+      const s=segs[i];
+      let pos=accum-walked;
+      while(pos<=s.dist && pos>=0){
+        // 在这个线段上pos位置插入箭头
+        const t=pos/s.dist;
+        const lat=s.latA[0]+(s.latB[0]-s.latA[0])*t;
+        const lng=s.latA[1]+(s.latB[1]-s.latA[1])*t;
+        const icon=L.divIcon({
+          className:'route-arrow',
+          html:`<svg width="${arrowSize*2}" height="${arrowSize*2}" style="opacity:${Math.min(opacity+0.15,1)}"><polygon points="${arrowSize},${arrowSize-4} ${arrowSize+6},${arrowSize} ${arrowSize},${arrowSize+4}" fill="${color}" transform="rotate(${s.angle},${arrowSize},${arrowSize})"/></svg>`,
+          iconSize:[arrowSize*2,arrowSize*2],
+          iconAnchor:[arrowSize,arrowSize]
+        });
+        L.marker([lat,lng],{icon,interactive:false}).addTo(arrowLayer);
+        accum+=minPx;
+        pos=accum-walked;
+      }
+      walked+=s.dist;
+    }
+  }
+
+  updateArrows();
+  map.on('zoomend moveend',updateArrows);
+  // 存储清理函数
+  arrowLayer._cleanArrows=()=>map.off('zoomend moveend',updateArrows);
+}
+
+function showDayLayers(dayId){
+  clearDayLayers();
+  const day=DAYS.find(d=>d.id===dayId);
+  if(!day)return;
+
+  // 画路线 + 箭头方向标识
+  day.routes.forEach(r=>{
+    const pts=r.pts.map(p=>Array.isArray(p)?p:P[p]).filter(Boolean);
+    if(pts.length<2)return;
+    const line=L.polyline(pts,{
+      color:r.color,weight:r.w,dashArray:r.dash,opacity:r.op,
+      lineCap:'round',lineJoin:'round'
+    }).addTo(map);
+    dayLines.push(line);
+
+    // 沿线段等距放置箭头
+    addArrows(pts, r.color, r.op||.7);
+  });
+
+  // 画标记（用Q版图标，取短名）
+  const seen=new Set();
+  day.stops.forEach(s=>{
+    if(!s.fly||!P[s.fly]||seen.has(s.fly))return;
+    seen.add(s.fly);
+    // 短名：取前4字
+    let shortName=s.name.replace(/[→←📍🏕️🚀🚄🛃🚇🚕🚌🏝️🔙🏖️⛰️🍹⛺🌙🌅🚤🏨🍜🏮🌉🥟🛍️🚡⛴️🍲🌅🚋🏛️🪜🎨🏘️🍡🏮🚶🏙️🛃🚉✈️🧳🥐]/g,'').trim();
+    if(shortName.length>5)shortName=shortName.substring(0,4)+'…';
+    const icon=makeQIcon(s.emoji,shortName,day.color);
+    const mk=L.marker(P[s.fly],{icon})
+      .addTo(map)
+      .bindPopup(`<div class="pop-title">${s.emoji} ${s.name}</div><div class="pop-detail">${s.detail||''}</div>`);
+    mk._flyKey=s.fly;
+    dayMarkers.push(mk);
+  });
+
+  // 画卫星可见地标（小三角标记，帮助定位）
+  const landmarks={
+    d51:[
+      {key:'eastDamWall',name:'东坝S形防波堤',icon:'🏗️'},
+      {key:'highIslandWestDam',name:'万宜西坝',icon:'🏗️'},
+      {key:'saiKungPier',name:'西贡码头',icon:'⚓'},
+    ],
+    d52:[
+      {key:'saiKungPier',name:'西贡码头T形突堤',icon:'⚓'},
+      {key:'iccTower',name:'ICC环球贸易广场',icon:'🏢'},
+    ],
+    d53:[
+      {key:'victoriaPeakTower',name:'凌霄阁圆顶',icon:'🗼'},
+      {key:'twoIFC',name:'IFC国际金融中心',icon:'🏢'},
+      {key:'iccTower',name:'ICC环球贸易广场',icon:'🏢'},
+    ],
+    d54:[
+      {key:'twoIFC',name:'IFC国金中心',icon:'🏢'},
+      {key:'hkceC',name:'会展中心弧形顶',icon:'🏛️'},
+      {key:'iccTower',name:'ICC环球贸易广场',icon:'🏢'},
+    ],
+    d55:[
+      {key:'iccTower',name:'ICC环球贸易广场',icon:'🏢'},
+      {key:'crossHarbourTunnel',name:'红磡海底隧道',icon:'🚇'},
+    ],
+  };
+  const lms=landmarks[dayId]||[];
+  lms.forEach(lm=>{
+    if(!P[lm.key])return;
+    const icon=L.divIcon({className:'',html:`<div style="font-size:14px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))">${lm.icon}</div>`,iconSize:[20,20],iconAnchor:[10,10]});
+    const mk=L.marker(P[lm.key],{icon})
+      .addTo(map)
+      .bindPopup(`<div style="font-size:11px;color:#fbbf24;font-weight:700">📍 ${lm.name}</div><div style="font-size:10px;color:var(--muted)">卫星图上可见的标志建筑</div>`);
+    dayMarkers.push(mk);
+  });
+
+  // 飞到当天范围
+  const allPts=day.stops.filter(s=>s.fly&&P[s.fly]).map(s=>P[s.fly]);
+  if(allPts.length)map.flyToBounds(allPts,{padding:[50,50],duration:1,maxZoom:16});
+
+  // 更新图例
+  document.getElementById('legendDay').textContent=day.dayNum;
+  let legHtml='';
+  day.routes.forEach(r=>{
+    legHtml+=`<div class="row"><div class="line" style="background:${r.color}${r.dash?';border-top:2px dashed '+r.color:''}"></div>${r.label}</div>`;
+  });
+  document.getElementById('legendContent').innerHTML=legHtml;
+}
+
+/* ═══════════════════════════════════════
+   卡片渲染
+   ═══════════════════════════════════════ */
+let currentDay=DAYS[0].id;
+
+function renderTabs(){
+  const c=document.getElementById('dayTabs');
+  c.innerHTML=DAYS.map(d=>`<div class="day-tab${d.id===currentDay?' active':''}" data-day="${d.id}" style="${d.id===currentDay?'color:'+d.color+';border-bottom-color:'+d.color:''}">${d.label}</div>`).join('');
+  c.querySelectorAll('.day-tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      currentDay=t.dataset.day;
+      renderTabs();
+      renderCards();
+      showDayLayers(currentDay);
+    });
+  });
+}
+
+function esc(s){return s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function showPhoto(url){
+  const v=document.createElement('div');
+  v.className='photo-viewer';
+  v.innerHTML=`<img src="${url}" onclick="event.stopPropagation()"/>`;
+  v.addEventListener('click',()=>v.remove());
+  document.body.appendChild(v);
+}
+
+function renderCards(){
+  const day=DAYS.find(d=>d.id===currentDay);
+  const wrap=document.getElementById('cardsWrap');
+  let html=`<div style="font-size:11px;color:${day.color};font-weight:800;padding:2px 0 6px">${day.title}</div>`;
+
+  day.stops.forEach((s,i)=>{
+    const hasBody=s.detail||s.alt||s.food||s.ticket||s.img||s.reason;
+    let tagsHtml='';
+    if(s.tags){
+      for(let j=0;j<s.tags.length;j+=2){
+        const txt=s.tags[j];const cls=s.tags[j+1]||'g';
+        tagsHtml+=`<span class="tag ${cls}">${esc(txt)}</span>`;
+      }
+    }
+    let bodyHtml='';
+    if(hasBody){
+      bodyHtml='<div class="sc-body">';
+      if(s.img&&IMGS[s.img]){
+        bodyHtml+=`<div class="photo-box"><img src="${IMGS[s.img]}" alt="${esc(s.imgCap||s.name)}" onclick="showPhoto('${IMGS[s.img]}')" loading="lazy"/><div class="photo-cap">📷 ${esc(s.imgCap||s.name)}</div></div>`;
+      }
+      if(s.reason){
+        bodyHtml+=`<div class="reason-box"><div class="reason-label">💡 为什么推荐这里</div><div class="reason-text">${esc(s.reason)}</div></div>`;
+      }
+      if(s.detail)bodyHtml+=`<div>${esc(s.detail)}</div>`;
+      if(s.ticket){
+        bodyHtml+=`<div class="ticket-box"><div class="ticket-title">🎫 购票/预约</div>${esc(s.ticket)}</div>`;
+      }
+      if(s.food){
+        bodyHtml+=`<div class="food-box"><div class="food-title">🍽️ 美食推荐</div>`;
+        s.food.forEach(f=>{
+          bodyHtml+=`<div class="food-item"><span class="fname">${esc(f.n)}</span> · ${esc(f.d)} <span class="fprice">[${esc(f.p)}]</span></div>`;
+        });
+        bodyHtml+='</div>';
+      }
+      if(s.alt){
+        bodyHtml+=`<div class="alt-box"><div class="alt-title">🔄 备选方案</div>${esc(s.alt).replace(/\n/g,'<br>')}</div>`;
+      }
+      bodyHtml+='</div>';
+    }
+
+    html+=`<div class="scard${i===0?' open':''}" data-idx="${i}" data-fly="${s.fly||''}" data-zoom="${s.zoom||14}">
+      <div class="sc-head">
+        <span class="sc-time">${esc(s.time)}</span>
+        <span class="sc-emoji">${s.emoji}</span>
+        <span class="sc-title">${esc(s.name)}</span>
+        ${hasBody?'<span class="sc-expand">▼</span>':''}
+      </div>
+      ${tagsHtml?'<div style="margin-top:2px">'+tagsHtml+'</div>':''}
+      ${bodyHtml}
+    </div>`;
+  });
+
+  const budget={'d51':'~HK$340','d52':'~HK$420','d53':'~HK$285','d54':'~HK$265','d55':'~HK$65'};
+  html+=`<div style="padding:8px 0 4px;text-align:center;font-size:10px;color:var(--muted)">当日预算 ≈ <b style="color:${day.color}">${budget[currentDay]||''}</b>（不含酒店/机票/高铁） · 五日总 ≈ HK$1,375</div>`;
+
+  wrap.innerHTML=html;
+
+  wrap.querySelectorAll('.scard').forEach(card=>{
+    card.addEventListener('click',()=>{
+      card.classList.toggle('open');
+      const key=card.dataset.fly;
+      const zoom=parseInt(card.dataset.zoom)||14;
+      if(key&&P[key]){
+        map.flyTo(P[key],zoom,{duration:.8});
+        dayMarkers.forEach(mk=>{
+          if(mk._flyKey===key)mk.openPopup();
+        });
+      }
+    });
+  });
+}
+
+/* ─── 启动 ─── */
+renderTabs();
+renderCards();
+showDayLayers(currentDay);
+</script>
+</body>
+</html>
