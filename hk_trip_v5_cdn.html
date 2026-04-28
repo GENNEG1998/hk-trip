@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>🏕️ 五一香港徒步 v5.1 · 翻页卡片地图</title>
+<title>🏕️ 五一香港徒步 v5.2 · 翻页卡片地图</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
@@ -153,8 +153,8 @@ html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC',sans-serif;font
 <body>
 <div id="app">
   <div class="topbar">
-    <h1>🏕️ 五一香港徒步 v5.1</h1>
-    <div class="sub">4.30晚出发 · 五天全满</div>
+    <h1>🏕️ 五一香港徒步 v5.2</h1>
+    <div class="sub">4.30飞深圳 · 六天全满</div>
     <div class="pills">
       <span class="pill b">⛺ 扎营</span>
       <span class="pill s">🚤 快艇</span>
@@ -180,7 +180,70 @@ html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC',sans-serif;font
    每天的 routes 数组定义当天显示的路线
    ═══════════════════════════════════════ */
 const DAYS=[
-{id:"d51",label:"5.1 🥾",title:"[周五] 凌晨到深圳 → 过关 → 东坝 → 破边洲 → 咸田湾扎营",color:"#2dd47b",
+{id:"d430",label:"4.30 ✈️",title:"[周四] 上海飞深圳 → 东门吃喝+买干粮 → 电竞酒店打游戏",color:"#a78bfa",
+dayNum:"4.30",
+routes:[
+  {label:"✈️ 上海→宝安机场",pts:["szAirport"],color:"#a78bfa",dash:"8,6",w:2,op:.3},
+  {label:"🚇 地铁→罗湖",pts:["szAirport",
+    [22.620,113.850],[22.600,113.880],[22.585,113.920],[22.575,113.960],
+    [22.568,114.000],[22.560,114.030],[22.555,114.060],[22.548,114.085],
+    [22.540,114.100],[22.535,114.115],"szStation"],color:"#fb923c",dash:"8,6",w:2.5,op:.55},
+  {label:"🚶 罗湖→东门老街",pts:["szStation",
+    [22.535,114.122],[22.538,114.124],[22.541,114.125],[22.544,114.125],"dongmenSt"],color:"#a78bfa",dash:"4,4",w:3,op:.7},
+  {label:"🚶 东门→酒店",pts:["dongmenSt",
+    [22.544,114.125],[22.541,114.125],[22.538,114.124],[22.535,114.122],"szStation"],color:"#a78bfa",dash:"4,6",w:2,op:.45},
+],
+stops:[
+{time:"10:05",emoji:"✈️",name:"宝安机场落地",fly:"szAirport",zoom:13,
+ detail:"上海→深圳宝安T3 · 10:05 落地\n取行李约20min · 10:30出机场",
+ reason:"上午航班到深圳，整个下午和晚上都是自由时间，可以在罗湖好好逛吃",
+ tags:["✈️ 上午航班","g"]},
+{time:"10:30-11:30",emoji:"🚇",name:"地铁→罗湖站",fly:"szStation",zoom:13,
+ detail:"机场站→地铁11号线→福田站→换1号线→罗湖站\n约60分钟 · ¥9\n路线：11号线（碧头方向反向·福田方向）→ 福田站换1号线（罗湖方向）→ 罗湖终点站",
+ reason:"上午10点多出发，地铁完全不挤，到罗湖正好赶上午饭时间",
+ ticket:"深圳通/支付宝乘车码均可 · 11号线+1号线 约60min",
+ alt:"打车到罗湖 ~¥100-120/40min（赶时间的话）"},
+{time:"11:30-11:40",emoji:"🚶",name:"罗湖站→东门老街",fly:"dongmenSt",zoom:16,
+ detail:"罗湖站A出口出站 → 沿建设路往南步行约600m → 右转入东门步行街\n全程步行约8-10分钟 · 沿路有指示牌\n\n📍 详细步行路线：\n1. 罗湖站A出口（火车站东广场方向）出站\n2. 出站后左转沿建设路直行（路宽·有行道树）\n3. 步行约600m看到「东门步行街」牌坊\n4. 进入步行街即到美食区",
+ reason:"东门老街是深圳最老的商业街区，从罗湖站走过去一路都有遮阳，8分钟轻松到达",
+ tags:["🚶 步行8min","g","📍 A出口","s"]},
+{time:"11:40-12:30",emoji:"🍖",name:"东门老街·深圳特色午餐",fly:"dongmenSt",zoom:17,
+ detail:"深圳本地特色美食 · 一份饭直接吃 · 出餐快",
+ reason:"东门老街是深圳最老的美食街区，烧腊快餐遍地都是，踩雷概率极低。公明烧鹅是深圳非遗美食，到深圳不吃等于没来",
+ tags:["🍖 深圳必吃","o","💰 ¥25-60","s"],
+ food:[{n:"公明烧鹅饭 ⭐首选",d:"烧鹅腿饭 ¥40-60 · 皮脆肉嫩 · 深圳非遗",p:"可微信/支付宝"},
+       {n:"潮汕牛肉粿条汤",d:"鲜牛肉粿条 ¥25-40 · 牛肉现切",p:"可微信/支付宝"},
+       {n:"烧腊快餐（随便一家）",d:"烧鹅饭/叉烧饭/烧肉饭 ¥25-40",p:"可微信/支付宝"},
+       {n:"肠粉",d:"鲜虾肠/牛肉肠/叉烧肠 ¥15-25",p:"可微信/支付宝"},
+       {n:"煲仔饭",d:"腊味煲仔饭/排骨煲仔饭 ¥30-50",p:"可微信/支付宝"}],
+ alt:"东门人太多→罗湖万象城B1美食广场（步行5min·选择多）"},
+{time:"12:30-13:00",emoji:"🏨",name:"入住电竞酒店",fly:"szStation",zoom:16,
+ detail:"网鱼电竞酒店·罗湖口岸万象城店\n步行回罗湖站附近 · 距口岸步行5分钟\n办理入住 · 放行李 · 休整一下",
+ reason:"口岸步行5分钟，第二天早上出门直接过关，不用赶地铁",
+ tags:["🎮 电竞酒店","p","💰 ¥200-350","s"],
+ ticket:"提前在携程/美团预订 · 五一期间可能涨价\n搜索：网鱼电竞酒店 罗湖口岸万象城店"},
+{time:"13:30-15:00",emoji:"🍜",name:"东门午餐·吃饱+买徒步干粮",fly:"dongmenSt",zoom:17,
+ detail:"东门老街吃午餐 · 吃饱为明天蓄力！\\n吃完顺便买些明天徒步路上的干粮零食\\n\\n🎒 徒步干粮推荐买：\\n· 肉松小贝/面包 — 高碳水补能量\\n· 牛肉干/鸡翅真空装 — 蛋白质\\n· 士力架/能量棒 — 随身补充\\n· 独立包装小零食 — 方便带",
+ reason:"午饭出去吃，吃完买好干粮就回酒店，晚餐直接点外卖",
+ food:[{n:"椰子鸡火锅 ⭐推荐",d:"椰子水锅底+文昌鸡 · 人均¥80-120 · 清淡不上火",p:"可微信/支付宝"},
+       {n:"烧腊饭（快速解决）",d:"烧鹅饭/叉烧饭 ¥25-40 · 不想等就吃这个",p:"可微信/支付宝"},
+       {n:"潮汕牛肉火锅",d:"鲜牛肉现切+手打粿条 ¥80-120",p:"可微信/支付宝"},
+       {n:"木屋烧烤套餐",d:"烧烤+啤酒套餐 ¥50-80",p:"可微信/支付宝"}],
+ tags:["🍜 午餐+买干粮","o","💰 ¥40-120","s"],
+ alt:"不想出门→酒店点外卖+网购干粮"},
+{time:"15:00-15:30",emoji:"🛒",name:"良品铺子/来伊份·买徒步干粮",fly:"dongmenSt",zoom:17,
+ detail:"午饭吃完顺路买好明天的干粮\\n良品铺子/来伊份/便利店都行",
+ reason:"专门给明天备干粮，买完直接回酒店",
+ food:[{n:"良品铺子/来伊份",d:"牛肉干+坚果+能量棒 ¥30-50",p:"微信/支付宝"},
+       {n:"鲍师傅（肉松小贝）⭐带路上吃",d:"肉松小贝 ¥20-30/盒 · 高碳水徒步好搭档",p:"微信/支付宝"}],
+ tags:["🎒 干粮采购","s","💰 ¥30-50","s"]},
+{time:"16:00-22:00",emoji:"🎮",name:"回酒店打游戏·外卖晚餐·整理装备·早睡",fly:"szStation",zoom:16,
+ detail:"回电竞酒店 · 打游戏放松\\n\\n🍔 晚餐点外卖（美团/饿了么）\\n不用出门 · 边打游戏边等外卖\\n推荐点：麦当劳套餐/必胜客/烧腊饭 ¥30-60\\n\\n🎮 打游戏到21:00差不多收\\n\\n✅ 整理装备清单：\\n✅ 帐篷+蛋槽垫 装好\\n✅ 充电宝充满\\n✅ 港澳通行证+八达通+港币现金 放好\\n✅ 水袋灌满\\n✅ 徒步干粮塞包里\\n✅ 闹钟设 05:30\\n\\n💤 22:00必须睡！明天05:30起床！\\n⚠️ 酒店到口岸步行约1km/15-20min，06:00出门",
+ reason:"下午早点回酒店享受电竞设备，晚餐直接外卖不用再出门，打完游戏整理装备早睡",
+ tags:["🎮 电竞酒店","p","🍔 外卖晚餐","o","💤 22:00必须睡","r"]},
+]},
+
+{id:"d51",label:"5.1 🥾",title:"[周五] 05:30起床→步行到口岸→过关→东坝→破边洲→咸田湾扎营",color:"#2dd47b",
 dayNum:"5.1",
 routes:[
   {label:"🚄 东铁线",pts:["szStation","luohu",
@@ -208,52 +271,52 @@ stops:[
  reason:"五一高峰+户外露营+跨境行程，遗漏任何一项都可能影响整个旅途。这份清单是从血泪经验中提炼出来的",
  tags:["⚠️ 务必检查","r","📋 出发前3天","o"],
  ticket:"📱 证件+支付\n✅ 港澳通行证 — 检查签注有效期！过期无法过关\n✅ 身份证（高铁+飞机+过关备用）\n✅ 八达通 — 提前充值HK$300+（便利店/MTR可充·支付宝乘車碼备用）\n✅ 港币现金 — 带HK$500+零钱（咸田湾士多/庙街小吃/深水埗老铺只收现金！）\n✅ 招行卡（Visa/Master）— 餐厅/咖啡店/紧急备用\n\n⛺ 露营装备\n✅ 帐篷（星河UL） + 蛋槽垫\n✅ 头灯 + 充电宝（≤2个·每个≤100Wh·可登机）\n✅ 防潮袋（手机+证件防水）\n✅ 驱蚊液 + 防晒霜（五月紫外线强）\n✅ 拖鞋/涉水鞋（快艇涉水上船）\n\n🥾 徒步装备\n✅ 徒步鞋（MH900/飞翼110·非防水夏季款）\n✅ 登山杖（下坡膝盖救星）\n✅ 速干衣裤 + 备用T恤\n✅ 雨衣/雨披（五月随时阵雨）\n✅ 2L水袋 + 电解质粉\n\n📱 预约+下载\n✅ 大馆 taikwun.hk 预约（5.4周一·至少提前3天）\n✅ 下载离线地图（Google Maps/高德·提前缓存西贡+市区）\n✅ 本网页手机版保存到手机（hk_trip_v5_mobile.html）\n\n🚨 紧急联系\n✅ 快艇 石先生 9834 6556（SK143牌照）\n✅ 香港报警 999 · 急救 999\n✅ 内地紧急 112\n✅ Hop Inn 前台电话提前查"},
-{time:"4.30 晚",emoji:"🚄",name:"上海出发→深圳",fly:"szStation",zoom:14,
- detail:"火车/高铁过夜 · 5.1凌晨05:00到深圳站",
- reason:"过夜火车省一晚住宿，凌晨到深圳直接过关，完美衔接第一天的户外行程"},
-{time:"05:00-05:30",emoji:"🛃",name:"罗湖过关",fly:"luohu",zoom:15,
- detail:"凌晨人少 ~20min · 港澳通行证+签注\n💡 过关后立刻在罗湖站客服中心买八达通（HK$150含HK$100储值）或用支付宝乘車碼",
- reason:"凌晨5点过关几乎零排队，平时要排1h+，这是全天最空的时段",
- tags:["⏰ 凌晨零排队","g"]},
-{time:"05:40-06:10",emoji:"🚇",name:"东铁线→大学站",fly:"university",zoom:14,
- detail:"罗湖→大学站 约30min · HK$36 · 首班05:55",
+{time:"05:30",emoji:"⏰",name:"起床·退房·步行到口岸",fly:"szStation",zoom:15,
+ detail:"05:30 起床洗漱 → 06:00 退房出门\n🚶 步行到罗湖口岸约1km/15-20min\n💡 06:15左右到口岸排队，06:30开闸第一批过关！\n⚠️ 别忘了带：港澳通行证+八达通+港币现金+露营装备+徒步干粮",
+ reason:"酒店距口岸约1km，步行15-20分钟。提前到排队，06:30一开闸第一批通过，越早越好"},
+{time:"06:15-06:45",emoji:"🛃",name:"罗湖过关",fly:"luohu",zoom:15,
+ detail:"06:15到口岸排队 → 06:30开闸第一批过关 · ~15min\n港澳通行证+签注 · 自助通道刷脸最快\n💡 过关后立刻在罗湖站客服中心买八达通（HK$150含HK$100储值）或用支付宝乘車碼",
+ reason:"06:15提前排队，06:30开闸立刻过，几乎零等待。8点以后五一人潮涌入要排1h+",
+ tags:["⏰ 06:30第一批","g"]},
+{time:"06:50-07:20",emoji:"🚇",name:"东铁线→大学站",fly:"university",zoom:14,
+ detail:"罗湖→大学站 约30min · HK$36",
  reason:"大学站是离麦径起点最近的铁路站，比到大埔站近40%车程",
  ticket:"八达通刷卡 / 支付宝乘車碼 · 无需预约",
- alt:"万一错过东铁首班→的士罗湖→北潭涌 HK$250 / 的士罗湖→大学站 HK$180"},
-{time:"06:15-06:50",emoji:"🚕",name:"的士→北潭涌",fly:"pakTamChung",zoom:13,
- detail:"清晨的士 ~25min HK$120 · NR9A首班07:00前到",
- reason:"NR9A首班7点，打车提前到能赶第一班小巴上山，比等公交省30min",
+ alt:"的士罗湖→北潭涌 HK$250 / 的士罗湖→大学站 HK$180"},
+{time:"07:25-07:55",emoji:"🚕",name:"的士→北潭涌",fly:"pakTamChung",zoom:13,
+ detail:"大学站B出口打车 ~25min HK$120",
+ reason:"打车比等公交省30min，直接到北潭涌赶NR9A小巴",
  alt:"备选① 96R假日巴士 钻石山→北潭涌 HK$15\n备选② 红色小巴 旺角→西贡 HK$25 → 转92巴士"},
-{time:"07:00-07:20",emoji:"🚌",name:"NR9A小巴→东坝",fly:"eastDam",zoom:15,
+{time:"08:00-08:20",emoji:"🚌",name:"NR9A小巴→东坝",fly:"eastDam",zoom:15,
  detail:"五一加密班次 · HK$13.1 · 20min · 北潭涌上车",
- reason:"NR9A是唯一直达东坝的公共交通，五一加开班次，但7点前到才能抢到位",
+ reason:"NR9A是唯一直达东坝的公共交通，五一加开班次",
  alt:"NR9A排不上→步行北潭涌→东坝 7km/1.5h（备选但费时）"},
-{time:"07:30",emoji:"🚀",name:"徒步起点：东坝",fly:"eastDam",zoom:16,
+{time:"08:30",emoji:"🚀",name:"徒步起点：东坝",fly:"eastDam",zoom:16,
  detail:"S形防波堤 · 万宜水库 · 整装出发",
  reason:"万宜水库东坝是联合国教科文组织认证的地质公园核心区，7000个锚形消波块+S形防波堤，全球仅此一处",img:'eastDam',imgCap:'东坝S形防波堤（7000个锚形消波块）'},
-{time:"08:00-09:30",emoji:"🏝️",name:"破边洲往返 3km",fly:"poPinChai",zoom:17,
+{time:"09:00-10:30",emoji:"🏝️",name:"破边洲往返 3km",fly:"poPinChai",zoom:17,
  detail:"海蚀拱门 · 六角柱 · 汇丰500取景地",
  reason:"破边洲是1.4亿年前火山喷发形成的六角柱状节理，比北爱尔兰巨人堤更壮观，汇丰500元纸币取景地",
  tags:["⚠️ 悬崖无护栏","r"],
  alt:"天气差/风大→跳过破边洲，直接走浪茄方向（省1.5h）",
  img:'poPinChai',imgCap:'破边洲海蚀柱（从东坝远眺）'},
-{time:"09:30-09:45",emoji:"🔙",name:"折返东坝",fly:"eastDam",zoom:16,
+{time:"10:30-10:45",emoji:"🔙",name:"折返东坝",fly:"eastDam",zoom:16,
  detail:"1.5km / 15min 快步返回"},
-{time:"09:45-10:30",emoji:"🏖️",name:"东坝→浪茄湾",fly:"longKe",zoom:16,
+{time:"10:45-11:30",emoji:"🏖️",name:"东坝→浪茄湾",fly:"longKe",zoom:16,
  detail:"1.4km / 35min 下降 · 水泥坡",
  reason:"浪茄湾被称为「香港马尔代夫」，水质清澈见底，全港最干净的沙滩之一，游客极少因只能徒步抵达",img:'longKe',imgCap:'浪茄湾（玻璃水沙滩）'},
-{time:"10:30-11:40",emoji:"⛰️",name:"浪茄→西湾山 314m",fly:"saiWanShan",zoom:15,
+{time:"11:30-12:40",emoji:"⛰️",name:"浪茄→西湾山 314m",fly:"saiWanShan",zoom:15,
  detail:"2.6km / 1h10min · 最硬爬升300m · 山顶360°海景",
  reason:"全程最大挑战，但登顶后360°无遮挡海景是麦径最壮观的视觉奖励，天气好能远眺蚺蛇尖",
  tags:["🔥 最难点","o"]},
-{time:"11:40-12:30",emoji:"🍹",name:"西湾山→大浪西湾",fly:"taiLongWan",zoom:16,
+{time:"12:40-13:30",emoji:"🍹",name:"西湾山→大浪西湾",fly:"taiLongWan",zoom:16,
  detail:"2.3km / 50min 下坡 · 午餐休整",
  reason:"大浪西湾是「香港最美海湾」四湾之首，三面环山一面临海，沙滩长达200m，比任何市区海滩都干净",
  food:[{n:"三星士多",d:"炒饭/公仔面 HK$40-50 · 冰可乐 HK$15",p:"仅收现金"}]},
-{time:"12:30-13:15",emoji:"⛺",name:"大浪西湾→咸田湾 🏕️",fly:"hamTin",zoom:17,
+{time:"13:30-14:15",emoji:"⛺",name:"大浪西湾→咸田湾 🏕️",fly:"hamTin",zoom:17,
  detail:"2.0km / 45min · 小海桥打卡",
  reason:"咸田湾是麦径最经典的营地，背山面海，远离光污染，夜晚银河肉眼可见，日出直照帐篷"},
-{time:"13:15-21:30",emoji:"🌙",name:"扎营·士多晚餐·星空",fly:"hamTin",zoom:17,
+{time:"14:15-21:30",emoji:"🌙",name:"扎营·士多晚餐·星空",fly:"hamTin",zoom:17,
  detail:"避涨潮线后20m · 现金买饭 · 05:50日出\n📱 咸田湾有微弱4G信号（中国联通漫游可能无信号）· 出发前下载离线地图\n🔋 充电宝务必充满 · 帐篷里无电源",
  reason:"在香港能野外扎营看星空的地方屈指可数，咸田湾是其中最原生态的——无电无网，只有海浪声",
  img:'hamTin',imgCap:'咸田湾沙滩营地',
@@ -626,6 +689,8 @@ const IMGS={
 
 /* ─── 坐标点（Nominatim 2026-04 校准） ─── */
 const P={
+  szAirport:[22.6394,113.8145], // 深圳宝安机场T3
+  dongmenSt:[22.5470,114.1250], // 东门老街
   szStation:[22.5328,114.1217], luohu:[22.5335,114.1188],
   university:[22.4137,114.2103], diamondHill:[22.3354,114.2018],
   pakTamChung:[22.3973,114.3190], eastDam:[22.3620,114.3715],
@@ -791,6 +856,9 @@ function showDayLayers(dayId){
 
   // 画卫星可见地标（小三角标记，帮助定位）
   const landmarks={
+    d430:[
+      {key:'szStation',name:'深圳站/罗湖',icon:'🚉'},
+    ],
     d51:[
       {key:'eastDamWall',name:'东坝S形防波堤',icon:'🏗️'},
       {key:'highIslandWestDam',name:'万宜西坝',icon:'🏗️'},
@@ -918,8 +986,8 @@ function renderCards(){
     </div>`;
   });
 
-  const budget={'d51':'~HK$340','d52':'~HK$420','d53':'~HK$285','d54':'~HK$265','d55':'~HK$65'};
-  html+=`<div style="padding:8px 0 4px;text-align:center;font-size:10px;color:var(--muted)">当日预算 ≈ <b style="color:${day.color}">${budget[currentDay]||''}</b>（不含酒店/机票/高铁） · 五日总 ≈ HK$1,375</div>`;
+  const budget={'d430':'~¥350','d51':'~HK$340','d52':'~HK$420','d53':'~HK$285','d54':'~HK$265','d55':'~HK$65'};
+  html+=`<div style="padding:8px 0 4px;text-align:center;font-size:10px;color:var(--muted)">当日预算 ≈ <b style="color:${day.color}">${budget[currentDay]||''}</b>（不含酒店/机票/高铁） · 六日总 ≈ HK$1,375 + ¥350</div>`;
 
   wrap.innerHTML=html;
 
