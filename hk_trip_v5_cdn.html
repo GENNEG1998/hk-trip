@@ -114,6 +114,7 @@ html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC',sans-serif;font
     <div class="pills">
       <span class="pill b">徒步53km</span>
       <span class="pill s">¥11,115</span>
+      <span class="pill" onclick="switchTile()" style="cursor:pointer">🗺️切图</span>
     </div>
   </div>
   <div id="map"></div>
@@ -439,7 +440,30 @@ stops:[
 ];
 
 const map=L.map('map',{zoomControl:true,attributionControl:false}).setView([35.0,137.0],5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+
+const tileSources=[
+  {name:'高德卫星',url:'https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',subdomains:'1234',maxZoom:18},
+  {name:'高德标准',url:'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}',subdomains:'1234',maxZoom:18},
+  {name:'OpenStreetMap',url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',subdomains:'abc',maxZoom:19},
+  {name:'CartoDB',url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',subdomains:'abcd',maxZoom:19}
+];
+let currentTile=null,currentTileIdx=0;
+function loadTile(idx){
+  if(currentTile)map.removeLayer(currentTile);
+  currentTileIdx=idx;
+  const src=tileSources[idx];
+  currentTile=L.tileLayer(src.url,{subdomains:src.subdomains,maxZoom:src.maxZoom,attribution:src.name}).addTo(map);
+  let errorCount=0;
+  currentTile.on('tileerror',()=>{
+    errorCount++;
+    if(errorCount>3&&idx<tileSources.length-1){
+      console.log('瓦片加载失败，切换到',tileSources[idx+1].name);
+      loadTile(idx+1);
+    }
+  });
+}
+loadTile(0);
+window.switchTile=function(){loadTile((currentTileIdx+1)%tileSources.length);};
 
 let activeRouteLayer=null,activeMarkers=[];
 function getPt(p){if(typeof p==='string')return POIS[p].slice(0,2);return p}
