@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>国庆日本机票盯价 · 实时面板</title>
+<style>
+  :root {
+    --bg: #0B0F14;
+    --bg2: #131A22;
+    --card: #1A2330;
+    --line: #2A3445;
+    --txt: #E8EDF2;
+    --muted: #7E8B9B;
+    --accent: #34D399;
+    --accent2: #FCD34D;
+    --warn: #FB923C;
+    --hot: #F87171;
+    --link: #7DD3FC;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--txt);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 18px 14px 60px; }
+
+  header { display: flex; flex-direction: column; gap: 6px; padding: 12px 0 18px; border-bottom: 1px solid var(--line); }
+  .title { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; }
+  .subtitle { font-size: 12px; color: var(--muted); }
+  .scanmeta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .hero {
+    margin-top: 16px;
+    background: linear-gradient(135deg, #1A2330 0%, #0F1620 100%);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 18px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .hero-label { font-size: 12px; color: var(--muted); }
+  .hero-price { font-size: 44px; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
+  .hero-price.warn { color: var(--warn); }
+  .hero-price.hot  { color: var(--hot); }
+  .hero-detail { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .hero-detail strong { color: var(--txt); font-weight: 600; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--card); color: var(--muted); border: 1px solid var(--line); }
+  .badge.ok   { color: var(--accent); border-color: rgba(52,211,153,0.3); }
+  .badge.bad  { color: var(--hot); border-color: rgba(248,113,113,0.3); }
+
+  section { margin-top: 22px; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .trend-img { width: 100%; height: auto; display: block; background: var(--bg); }
+  .empty {
+    padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td.price { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  td.price.warn { color: var(--warn); }
+  td.price.hot  { color: var(--hot); }
+  tr:last-child td { border-bottom: none; }
+
+  .grid-cols { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 720px) {
+    .grid-cols.cols-2 { grid-template-columns: 1fr 1fr; }
+  }
+
+  .combo {
+    padding: 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .combo:last-child { border-bottom: none; }
+  .combo-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .combo-route { font-size: 13px; color: var(--muted); }
+  .combo-total { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .combo-total.warn { color: var(--warn); }
+
+  .sources {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .src-chip {
+    font-size: 11px; padding: 4px 9px; border-radius: 6px;
+    background: var(--card); border: 1px solid var(--line); color: var(--muted);
+  }
+  .src-chip.live { color: var(--accent); border-color: rgba(52,211,153,0.4); }
+
+  footer { margin-top: 30px; text-align: center; color: var(--muted); font-size: 11px; line-height: 1.7; }
+  footer a { color: var(--link); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="title">国庆日本机票盯价</div>
+    <div class="subtitle">2026-10-01 上海 ⇄ 日本 · 10-05 / 10-06 返程 · 多平台监控</div>
+    <div class="scanmeta" id="scanmeta">加载中…</div>
+  </header>
+
+  <!-- 主推：往返最低组合 -->
+  <div class="hero" id="hero">
+    <div class="hero-label">当前最佳往返组合</div>
+    <div class="hero-price" id="heroPrice">— —</div>
+    <div class="hero-detail" id="heroDetail">数据加载中…</div>
+    <div class="badges" id="heroBadges"></div>
+  </div>
+
+  <!-- 走势图 -->
+  <section>
+    <h2>价格走势</h2>
+    <div class="card">
+      <img class="trend-img" id="trendImg" alt="trend" src="../data/trend.png" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+      <div class="empty" style="display:none;">尚无走势数据，等待第一次扫描完成…</div>
+    </div>
+  </section>
+
+  <!-- 平台覆盖 -->
+  <section>
+    <h2>本次扫描覆盖平台</h2>
+    <div class="sources" id="sources"></div>
+  </section>
+
+  <!-- 往返组合 -->
+  <section>
+    <h2>往返组合 TOP</h2>
+    <div class="card" id="combos"><div class="empty">数据加载中…</div></div>
+  </section>
+
+  <!-- 去程 TOP -->
+  <section>
+    <h2>去程 10/1 上海 → 日本 · TOP10</h2>
+    <div class="card" id="outboundTop"><div class="empty">数据加载中…</div></div>
+  </section>
+
+  <!-- 返程 10/5 / 10/6 -->
+  <section>
+    <h2>返程 TOP10</h2>
+    <div class="grid-cols cols-2">
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">10/5 日本 → 上海</div>
+        <div class="card" id="return5"><div class="empty">数据加载中…</div></div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">10/6 日本 → 上海</div>
+        <div class="card" id="return6"><div class="empty">数据加载中…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    数据每天 8:00 / 12:00 / 16:00 / 20:00（北京时间）由 GitHub Actions 自动刷新<br>
+    监控平台：Trip.com · 携程 · 春秋 · 去哪儿 · 飞猪<br>
+    <a href="../hk_trip_v5_cdn.html">← 返回行程主页</a>
+  </footer>
+</div>
+
+<script>
+const EXPECTS = { roundtrip: 3000, outbound: 2000, ret: 1500 };
+
+const $ = (id) => document.getElementById(id);
+
+function fmt(n) { return "¥" + n.toLocaleString("zh-CN"); }
+
+function priceClass(price, target) {
+  if (!price) return "";
+  if (price <= target * 0.93) return "hot";
+  if (price <= target) return "";
+  if (price <= target * 1.15) return "warn";
+  return "warn";
+}
+
+function renderHero(payload) {
+  const combos = payload.best_combos || [];
+  if (!combos.length) {
+    $("heroPrice").textContent = "暂无数据";
+    $("heroDetail").innerHTML = "等待首次扫描完成…";
+    return;
+  }
+  const best = combos[0];
+  const total = best.total_cny;
+  const cls = total <= EXPECTS.roundtrip * 0.93 ? "hot"
+            : total <= EXPECTS.roundtrip ? ""
+            : "warn";
+  const heroPrice = $("heroPrice");
+  heroPrice.textContent = fmt(total);
+  heroPrice.className = "hero-price " + cls;
+
+  const o = best.outbound, r = best.inbound;
+  $("heroDetail").innerHTML =
+    `<strong>${o.airline} ${o.flight_no}</strong> ${o.depart_time} ${o.origin}→${o.destination}（${fmt(o.price_cny)}）` +
+    `&nbsp;&nbsp;+&nbsp;&nbsp;` +
+    `<strong>${r.airline} ${r.flight_no}</strong> ${r.depart_time} ${r.origin}→${r.destination}（${fmt(r.price_cny)}）<br>` +
+    `返程日：${best.return_date} · 来源：${o.source} / ${r.source}`;
+
+  const badges = [];
+  if (total <= 2800) badges.push(['🔥 历史低点', 'ok']);
+  if (total <= EXPECTS.roundtrip) badges.push(['🟢 达成期望往返', 'ok']);
+  else badges.push([`⚠️ 仍超期望 ¥${total - EXPECTS.roundtrip}`, 'bad']);
+  if (o.price_cny <= EXPECTS.outbound) badges.push(['✓ 去程达标', 'ok']);
+  if (r.price_cny <= EXPECTS.ret) badges.push(['✓ 返程达标', 'ok']);
+
+  $("heroBadges").innerHTML = badges.map(([t,c]) => `<span class="badge ${c}">${t}</span>`).join('');
+}
+
+function renderSources(payload) {
+  const all = ['trip.com','ctrip','chunqiu','qunar','fliggy'];
+  const seen = new Set(payload.sources_seen || []);
+  $("sources").innerHTML = all.map(s =>
+    `<span class="src-chip ${seen.has(s) ? 'live' : ''}">${seen.has(s) ? '● ' : '○ '}${s}</span>`
+  ).join('');
+}
+
+function renderCombos(payload) {
+  const list = payload.best_combos || [];
+  if (!list.length) {
+    $("combos").innerHTML = '<div class="empty">本次未抓到完整往返数据</div>';
+    return;
+  }
+  $("combos").innerHTML = list.slice(0, 5).map(c => {
+    const cls = c.total_cny <= EXPECTS.roundtrip ? "" : "warn";
+    return `
+      <div class="combo">
+        <div class="combo-row">
+          <div class="combo-route">
+            ${c.outbound.flight_no} (${c.outbound.depart_time} ${c.outbound.origin}→${c.outbound.destination})
+            +
+            ${c.inbound.flight_no} (${c.inbound.depart_time} ${c.inbound.origin}→${c.inbound.destination})
+          </div>
+          <div class="combo-total ${cls}">${fmt(c.total_cny)}</div>
+        </div>
+        <div class="combo-route">
+          ${c.outbound.airline} 去 ¥${c.outbound.price_cny} · ${c.inbound.airline} ${c.return_date} 返 ¥${c.inbound.price_cny}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderTable(containerId, list, target) {
+  const el = $(containerId);
+  if (!list || !list.length) {
+    el.innerHTML = '<div class="empty">未抓到数据</div>';
+    return;
+  }
+  const rows = list.map(o => {
+    const cls = priceClass(o.price_cny, target);
+    return `<tr>
+      <td>${o.flight_no}</td>
+      <td>${o.airline}</td>
+      <td>${o.depart_time} → ${o.arrive_time}</td>
+      <td>${o.origin}→${o.destination}</td>
+      <td class="price ${cls}">${fmt(o.price_cny)}</td>
+      <td style="color:var(--muted);font-size:11px;">${o.source}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table>
+    <thead><tr><th>航班</th><th>航司</th><th>时间</th><th>线路</th><th>价格</th><th>来源</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+async function load() {
+  try {
+    const url = "../data/flights_latest.json?_=" + Date.now();
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+
+    // 扫描时间
+    const t = new Date(data.scan_time);
+    const ts = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    $("scanmeta").innerHTML =
+      `最近扫描：${ts}（北京时间）· 共采集 <strong style="color:var(--txt)">${data.totals.all}</strong> 条 · ` +
+      `去程 ${data.totals.outbound} · 10/5 ${data.totals.return_10_5} · 10/6 ${data.totals.return_10_6}`;
+
+    renderHero(data);
+    renderSources(data);
+    renderCombos(data);
+    renderTable("outboundTop", data.outbound_top10, EXPECTS.outbound);
+    renderTable("return5",      data.return_10_5_top10, EXPECTS.ret);
+    renderTable("return6",      data.return_10_6_top10, EXPECTS.ret);
+
+    // 给 trend.png 加随机后缀避免缓存
+    const img = $("trendImg");
+    img.src = "../data/trend.png?_=" + Date.now();
+  } catch (e) {
+    $("scanmeta").innerHTML = `<span style="color:var(--hot)">加载失败：${e.message}</span> · 等待 GitHub Actions 首次扫描完成`;
+    $("heroPrice").textContent = "等待数据";
+    $("heroDetail").textContent = "首次扫描后将自动显示";
+  }
+}
+
+load();
+// 5 分钟自动重新拉一次（防止用户开着页面没数据）
+setInterval(load, 5 * 60 * 1000);
+</script>
+
+</body>
+</html>
