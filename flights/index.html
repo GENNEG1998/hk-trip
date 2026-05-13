@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>国庆日本机票盯价 · 实时面板</title>
+<title>国庆日本机票 · 一屏直达</title>
 <style>
   :root {
     --bg: #0B0F14;
@@ -25,82 +25,114 @@
     color: var(--txt);
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     min-height: 100vh;
+    line-height: 1.5;
   }
+  a { color: inherit; text-decoration: none; }
   .wrap { max-width: 980px; margin: 0 auto; padding: 18px 14px 60px; }
 
-  header { display: flex; flex-direction: column; gap: 6px; padding: 12px 0 18px; border-bottom: 1px solid var(--line); }
+  header { padding: 12px 0 18px; border-bottom: 1px solid var(--line); }
   .title { font-size: 22px; font-weight: 700; letter-spacing: 0.3px; }
-  .subtitle { font-size: 12px; color: var(--muted); }
-  .scanmeta { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-  .hero {
-    margin-top: 16px;
-    background: linear-gradient(135deg, #1A2330 0%, #0F1620 100%);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 22px 18px;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .hero-label { font-size: 12px; color: var(--muted); }
-  .hero-price { font-size: 44px; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
-  .hero-price.warn { color: var(--warn); }
-  .hero-price.hot  { color: var(--hot); }
-  .hero-detail { font-size: 13px; color: var(--muted); line-height: 1.6; }
-  .hero-detail strong { color: var(--txt); font-weight: 600; }
-  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-  .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--card); color: var(--muted); border: 1px solid var(--line); }
-  .badge.ok   { color: var(--accent); border-color: rgba(52,211,153,0.3); }
-  .badge.bad  { color: var(--hot); border-color: rgba(248,113,113,0.3); }
+  .subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
   section { margin-top: 22px; }
-  h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 10px; letter-spacing: 0.8px; text-transform: uppercase; }
 
-  .card {
-    background: var(--card);
+  /* 价格参考卡片 */
+  .ref-grid {
+    display: grid; gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) { .ref-grid { grid-template-columns: repeat(3, 1fr); } }
+  .ref-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ref-route { font-size: 13px; color: var(--muted); }
+  .ref-date { font-size: 18px; font-weight: 700; }
+  .ref-prices { display: flex; gap: 14px; margin-top: 6px; }
+  .ref-prices div { flex: 1; }
+  .ref-prices .label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .ref-prices .val { font-size: 17px; font-weight: 700; }
+  .ref-prices .low { color: var(--accent); }
+  .ref-prices .avg { color: var(--accent2); }
+  .ref-prices .high { color: var(--warn); }
+  .ref-tip { font-size: 11px; color: var(--muted); margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--line); }
+
+  /* 跳转按钮 */
+  .leg {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .leg-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 12px;
+    flex-wrap: wrap; gap: 6px;
+  }
+  .leg-title { font-size: 16px; font-weight: 700; }
+  .leg-meta { font-size: 12px; color: var(--muted); }
+  .leg-target {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    background: rgba(52,211,153,0.12); color: var(--accent);
+    font-size: 11px; font-weight: 600;
+    border: 1px solid rgba(52,211,153,0.3);
+  }
+
+  .platforms {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width: 540px) { .platforms { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 720px) { .platforms { grid-template-columns: repeat(5, 1fr); } }
+
+  .platform {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    padding: 14px 8px;
+    background: var(--bg2);
     border: 1px solid var(--line);
-    border-radius: 12px;
-    overflow: hidden;
+    border-radius: 10px;
+    transition: all .15s ease;
+    cursor: pointer;
   }
-  .trend-img { width: 100%; height: auto; display: block; background: var(--bg); }
-  .empty {
-    padding: 30px 16px; text-align: center; color: var(--muted); font-size: 13px;
+  .platform:hover {
+    border-color: var(--accent);
+    background: rgba(52,211,153,0.08);
+    transform: translateY(-1px);
   }
+  .platform .icon { font-size: 22px; }
+  .platform .name { font-size: 12px; font-weight: 600; }
+  .platform .tag { font-size: 10px; color: var(--muted); }
+  .platform.featured { border-color: rgba(252,211,77,0.4); background: rgba(252,211,77,0.05); }
+  .platform.featured .tag { color: var(--accent2); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line); }
-  th { font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-  td.price { font-weight: 700; color: var(--accent); white-space: nowrap; }
-  td.price.warn { color: var(--warn); }
-  td.price.hot  { color: var(--hot); }
-  tr:last-child td { border-bottom: none; }
-
-  .grid-cols { display: grid; grid-template-columns: 1fr; gap: 14px; }
-  @media (min-width: 720px) {
-    .grid-cols.cols-2 { grid-template-columns: 1fr 1fr; }
+  /* 操作说明 */
+  .tips {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px;
   }
+  .tip-item { padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .tip-item:last-child { border-bottom: none; }
+  .tip-item b { color: var(--accent2); }
 
-  .combo {
+  /* 行情对照 */
+  .calendar {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
     padding: 14px;
+    font-size: 12px;
+  }
+  .calendar-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 8px 0;
     border-bottom: 1px solid var(--line);
-    display: flex; flex-direction: column; gap: 4px;
   }
-  .combo:last-child { border-bottom: none; }
-  .combo-row { display: flex; justify-content: space-between; align-items: baseline; }
-  .combo-route { font-size: 13px; color: var(--muted); }
-  .combo-total { font-size: 18px; font-weight: 700; color: var(--accent); }
-  .combo-total.warn { color: var(--warn); }
-
-  .sources {
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
-  .src-chip {
-    font-size: 11px; padding: 4px 9px; border-radius: 6px;
-    background: var(--card); border: 1px solid var(--line); color: var(--muted);
-  }
-  .src-chip.live { color: var(--accent); border-color: rgba(52,211,153,0.4); }
+  .calendar-row:last-child { border-bottom: none; }
+  .calendar-row.head { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .calendar-row.head + .calendar-row { padding-top: 12px; }
 
   footer { margin-top: 30px; text-align: center; color: var(--muted); font-size: 11px; line-height: 1.7; }
-  footer a { color: var(--link); text-decoration: none; }
+  footer a { color: var(--link); }
 </style>
 </head>
 <body>
@@ -108,206 +140,240 @@
 <div class="wrap">
 
   <header>
-    <div class="title">国庆日本机票盯价</div>
-    <div class="subtitle">2026-10-01 上海 ⇄ 日本 · 10-05 / 10-06 返程 · 多平台监控</div>
-    <div class="scanmeta" id="scanmeta">加载中…</div>
+    <div class="title">国庆日本机票 · 一屏直达</div>
+    <div class="subtitle">2026-10-01 上海 ⇄ 日本 · 10-05 / 10-06 返程 · 五大平台快捷比价</div>
   </header>
 
-  <!-- 主推：往返最低组合 -->
-  <div class="hero" id="hero">
-    <div class="hero-label">当前最佳往返组合</div>
-    <div class="hero-price" id="heroPrice">— —</div>
-    <div class="hero-detail" id="heroDetail">数据加载中…</div>
-    <div class="badges" id="heroBadges"></div>
-  </div>
-
-  <!-- 走势图 -->
+  <!-- 价格参考区间 -->
   <section>
-    <h2>价格走势</h2>
-    <div class="card">
-      <img class="trend-img" id="trendImg" alt="trend" src="../data/trend.png" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-      <div class="empty" style="display:none;">尚无走势数据，等待第一次扫描完成…</div>
+    <h2>📊 历史参考价（手动维护，每周更新）</h2>
+    <div class="ref-grid">
+      <div class="ref-card">
+        <div class="ref-route">上海 → 大阪</div>
+        <div class="ref-date">10/1 去程</div>
+        <div class="ref-prices">
+          <div><div class="label">历史低</div><div class="val low">¥1,400</div></div>
+          <div><div class="label">历史均</div><div class="val avg">¥1,800</div></div>
+          <div><div class="label">国庆均</div><div class="val high">¥2,300</div></div>
+        </div>
+        <div class="ref-tip">目标价 ≤ ¥2,000 触发买入</div>
+      </div>
+
+      <div class="ref-card">
+        <div class="ref-route">大阪/东京 → 上海</div>
+        <div class="ref-date">10/5 返程</div>
+        <div class="ref-prices">
+          <div><div class="label">历史低</div><div class="val low">¥900</div></div>
+          <div><div class="label">历史均</div><div class="val avg">¥1,500</div></div>
+          <div><div class="label">国庆均</div><div class="val high">¥2,000</div></div>
+        </div>
+        <div class="ref-tip">假期最后一天，返程高峰</div>
+      </div>
+
+      <div class="ref-card">
+        <div class="ref-route">大阪/东京 → 上海</div>
+        <div class="ref-date">10/6 返程</div>
+        <div class="ref-prices">
+          <div><div class="label">历史低</div><div class="val low">¥1,100</div></div>
+          <div><div class="label">历史均</div><div class="val avg">¥1,700</div></div>
+          <div><div class="label">国庆均</div><div class="val high">¥2,200</div></div>
+        </div>
+        <div class="ref-tip">假期后第一天，调休返程</div>
+      </div>
+    </div>
+    <div style="margin-top:10px; font-size:11px; color:var(--muted);">
+      💡 目标：往返 ≤ ¥3,000 · 极优：≤ ¥2,800 · 单段去 ≤ ¥2,000 / 单段返 ≤ ¥1,500
     </div>
   </section>
 
-  <!-- 平台覆盖 -->
+  <!-- 一键直达 -->
   <section>
-    <h2>本次扫描覆盖平台</h2>
-    <div class="sources" id="sources"></div>
-  </section>
+    <h2>🚀 一键直达搜索（已预填上海 ⇄ 大阪/东京）</h2>
 
-  <!-- 往返组合 -->
-  <section>
-    <h2>往返组合 TOP</h2>
-    <div class="card" id="combos"><div class="empty">数据加载中…</div></div>
-  </section>
-
-  <!-- 去程 TOP -->
-  <section>
-    <h2>去程 10/1 上海 → 日本 · TOP10</h2>
-    <div class="card" id="outboundTop"><div class="empty">数据加载中…</div></div>
-  </section>
-
-  <!-- 返程 10/5 / 10/6 -->
-  <section>
-    <h2>返程 TOP10</h2>
-    <div class="grid-cols cols-2">
-      <div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">10/5 日本 → 上海</div>
-        <div class="card" id="return5"><div class="empty">数据加载中…</div></div>
+    <!-- 去程 -->
+    <div class="leg">
+      <div class="leg-head">
+        <div>
+          <div class="leg-title">✈️ 去程 · 10/1 上海 → 日本</div>
+          <div class="leg-meta">目标价 <span class="leg-target">≤ ¥2,000</span></div>
+        </div>
       </div>
-      <div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">10/6 日本 → 上海</div>
-        <div class="card" id="return6"><div class="empty">数据加载中…</div></div>
+      <div class="platforms" id="legGo"></div>
+    </div>
+
+    <!-- 10/5 返 -->
+    <div class="leg">
+      <div class="leg-head">
+        <div>
+          <div class="leg-title">🛬 返程 · 10/5 日本 → 上海</div>
+          <div class="leg-meta">目标价 <span class="leg-target">≤ ¥1,500</span></div>
+        </div>
       </div>
+      <div class="platforms" id="legBack5"></div>
+    </div>
+
+    <!-- 10/6 返 -->
+    <div class="leg">
+      <div class="leg-head">
+        <div>
+          <div class="leg-title">🛬 返程 · 10/6 日本 → 上海</div>
+          <div class="leg-meta">目标价 <span class="leg-target">≤ ¥1,500</span></div>
+        </div>
+      </div>
+      <div class="platforms" id="legBack6"></div>
+    </div>
+
+    <!-- 整月对比 -->
+    <div class="leg">
+      <div class="leg-head">
+        <div>
+          <div class="leg-title">📅 整月最低价日历</div>
+          <div class="leg-meta">看整个 9 月底到 10 月初的价格分布</div>
+        </div>
+      </div>
+      <div class="platforms" id="legMonth"></div>
+    </div>
+  </section>
+
+  <!-- 操作建议 -->
+  <section>
+    <h2>💡 推荐操作流程（按这个走 0 焦虑）</h2>
+    <div class="tips">
+      <div class="tip-item">
+        <b>① 同程 APP 设「低价预约」</b><br>
+        搜上海→大阪 10/1 / 大阪→上海 10/5 → 选航班 → 点「低价预约」 → 目标价填 ¥2,000 / ¥1,500
+        → 系统全天候监控，达标自动出票，到期未达自动全额退款。
+      </div>
+      <div class="tip-item">
+        <b>② 航旅纵横 APP 看裸价</b><br>
+        民航局官方数据，无 OTA 加价。每天看一次「价格走势图」判断当前买点位置。
+      </div>
+      <div class="tip-item">
+        <b>③ Skyscanner 开 Price Alert</b><br>
+        网页搜完点 Get Price Alerts → 邮件订阅。聚合全球 1200+ OTA，覆盖比国内任何一家都全。
+      </div>
+      <div class="tip-item">
+        <b>④ 关键时间窗口</b><br>
+        国庆机票一般在 <b>出发前 60-45 天</b>（即 8/1-8/15）和 <b>出发前 20-15 天</b>（即 9/10-9/15）有两次降价窗口。
+        9 月 15 日后基本只涨不跌，必须果断。
+      </div>
+      <div class="tip-item">
+        <b>⑤ 春秋官网直购</b><br>
+        若同程/航旅显示春秋 9C6193 / 9C8568，直接去春秋官网下单（同价或更便宜，且行李额规则更灵活）。
+      </div>
+    </div>
+  </section>
+
+  <!-- 价格速查表 -->
+  <section>
+    <h2>📋 各机场价差速查（同一日期不同到达城市的历史价差）</h2>
+    <div class="calendar">
+      <div class="calendar-row head">
+        <div>日期</div>
+        <div>大阪 KIX</div>
+        <div>东京 NRT/HND</div>
+        <div>福冈 FUK</div>
+      </div>
+      <div class="calendar-row">
+        <div>10/1 去</div>
+        <div>¥1,400-2,300</div>
+        <div>¥1,500-2,500</div>
+        <div>¥1,300-2,200</div>
+      </div>
+      <div class="calendar-row">
+        <div>10/5 返</div>
+        <div>¥900-2,000</div>
+        <div>¥1,000-2,200</div>
+        <div>¥800-1,900</div>
+      </div>
+      <div class="calendar-row">
+        <div>10/6 返</div>
+        <div>¥1,100-2,200</div>
+        <div>¥1,200-2,400</div>
+        <div>¥1,000-2,100</div>
+      </div>
+    </div>
+    <div style="margin-top:10px; font-size:11px; color:var(--muted);">
+      💡 福冈普遍最便宜，但要从大阪/京都火车 5h 过去（不推荐）。优先大阪，备选东京。
     </div>
   </section>
 
   <footer>
-    数据每天 8:00 / 12:00 / 16:00 / 20:00（北京时间）由 GitHub Actions 自动刷新<br>
-    监控平台：Trip.com · 携程 · 春秋 · 去哪儿 · 飞猪<br>
     <a href="../hk_trip_v5_cdn.html">← 返回行程主页</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/GENNEG1998/hk-trip" target="_blank">GitHub</a>
+    <br>
+    页面无需自动刷新 · 价格请点击平台跳转实时查看 · 参考价区间由 owner 周度手动维护
   </footer>
+
 </div>
 
 <script>
-const EXPECTS = { roundtrip: 3000, outbound: 2000, ret: 1500 };
+// 平台配置：name + icon + tag + URL 构造器
+const PLATFORMS = [
+  { id: 'ly',  name: '同程旅行', icon: '🟢', tag: '推荐·有走势', featured: true,
+    build: (o, d, date) => `https://www.ly.com/flight/airlineList.html?type=1&dCityCode=${o}&aCityCode=${d}&dDate=${date}` },
+  { id: 'umetrip', name: '航旅纵横', icon: '✈️', tag: '官方权威',
+    build: (o, d, date) => `https://www.umetrip.com/mskyweb/fis/route?dep=${o}&arr=${d}&date=${date}` },
+  { id: 'sky', name: 'Skyscanner', icon: '🌐', tag: '全球聚合',
+    build: (o, d, date) => `https://www.skyscanner.com.cn/transport/flights/${o.toLowerCase()}/${d.toLowerCase()}/${date.slice(2,4)}${date.slice(5,7)}${date.slice(8,10)}/` },
+  { id: 'ctrip', name: '携程', icon: '🟦', tag: '主流',
+    build: (o, d, date) => `https://flights.ctrip.com/online/list/oneway-${o.toLowerCase()}-${d.toLowerCase()}?_=1&depdate=${date}&cabin=y_s&adult=1&child=0&infant=0` },
+  { id: 'chunqiu', name: '春秋航空', icon: '🌸', tag: '低价廉航',
+    build: (o, d, date) => `https://www.ch.com/flightsearch?dpc=${o}&apc=${d}&dd=${date}&adt=1&chd=0&inf=0&type=oneway` },
+  { id: 'google', name: 'Google Flights', icon: '🇬', tag: '需梯子',
+    build: (o, d, date) => `https://www.google.com/travel/flights?q=Flights%20from%20${o}%20to%20${d}%20on%20${date}` },
+  { id: 'trip', name: 'Trip.com', icon: '🌏', tag: '海外版携程',
+    build: (o, d, date) => `https://www.trip.com/flights/showfarefirst?dcity=${o.toLowerCase()}&acity=${d.toLowerCase()}&ddate=${date}&triptype=ow&class=y&quantity=1` },
+];
 
-const $ = (id) => document.getElementById(id);
-
-function fmt(n) { return "¥" + n.toLocaleString("zh-CN"); }
-
-function priceClass(price, target) {
-  if (!price) return "";
-  if (price <= target * 0.93) return "hot";
-  if (price <= target) return "";
-  if (price <= target * 1.15) return "warn";
-  return "warn";
-}
-
-function renderHero(payload) {
-  const combos = payload.best_combos || [];
-  if (!combos.length) {
-    $("heroPrice").textContent = "暂无数据";
-    $("heroDetail").innerHTML = "等待首次扫描完成…";
-    return;
-  }
-  const best = combos[0];
-  const total = best.total_cny;
-  const cls = total <= EXPECTS.roundtrip * 0.93 ? "hot"
-            : total <= EXPECTS.roundtrip ? ""
-            : "warn";
-  const heroPrice = $("heroPrice");
-  heroPrice.textContent = fmt(total);
-  heroPrice.className = "hero-price " + cls;
-
-  const o = best.outbound, r = best.inbound;
-  $("heroDetail").innerHTML =
-    `<strong>${o.airline} ${o.flight_no}</strong> ${o.depart_time} ${o.origin}→${o.destination}（${fmt(o.price_cny)}）` +
-    `&nbsp;&nbsp;+&nbsp;&nbsp;` +
-    `<strong>${r.airline} ${r.flight_no}</strong> ${r.depart_time} ${r.origin}→${r.destination}（${fmt(r.price_cny)}）<br>` +
-    `返程日：${best.return_date} · 来源：${o.source} / ${r.source}`;
-
-  const badges = [];
-  if (total <= 2800) badges.push(['🔥 历史低点', 'ok']);
-  if (total <= EXPECTS.roundtrip) badges.push(['🟢 达成期望往返', 'ok']);
-  else badges.push([`⚠️ 仍超期望 ¥${total - EXPECTS.roundtrip}`, 'bad']);
-  if (o.price_cny <= EXPECTS.outbound) badges.push(['✓ 去程达标', 'ok']);
-  if (r.price_cny <= EXPECTS.ret) badges.push(['✓ 返程达标', 'ok']);
-
-  $("heroBadges").innerHTML = badges.map(([t,c]) => `<span class="badge ${c}">${t}</span>`).join('');
-}
-
-function renderSources(payload) {
-  const all = ['trip.com','ctrip','chunqiu','qunar','fliggy'];
-  const seen = new Set(payload.sources_seen || []);
-  $("sources").innerHTML = all.map(s =>
-    `<span class="src-chip ${seen.has(s) ? 'live' : ''}">${seen.has(s) ? '● ' : '○ '}${s}</span>`
-  ).join('');
-}
-
-function renderCombos(payload) {
-  const list = payload.best_combos || [];
-  if (!list.length) {
-    $("combos").innerHTML = '<div class="empty">本次未抓到完整往返数据</div>';
-    return;
-  }
-  $("combos").innerHTML = list.slice(0, 5).map(c => {
-    const cls = c.total_cny <= EXPECTS.roundtrip ? "" : "warn";
-    return `
-      <div class="combo">
-        <div class="combo-row">
-          <div class="combo-route">
-            ${c.outbound.flight_no} (${c.outbound.depart_time} ${c.outbound.origin}→${c.outbound.destination})
-            +
-            ${c.inbound.flight_no} (${c.inbound.depart_time} ${c.inbound.origin}→${c.inbound.destination})
-          </div>
-          <div class="combo-total ${cls}">${fmt(c.total_cny)}</div>
-        </div>
-        <div class="combo-route">
-          ${c.outbound.airline} 去 ¥${c.outbound.price_cny} · ${c.inbound.airline} ${c.return_date} 返 ¥${c.inbound.price_cny}
-        </div>
-      </div>`;
+// 渲染平台按钮组：传 origin/dest 数组，自动生成所有组合
+function renderPlatforms(containerId, origin, dests, date) {
+  const el = document.getElementById(containerId);
+  // 默认主城市：上海用 SHA（携程会自动包含 PVG），日本主推大阪 OSA + 东京 TYO
+  const html = PLATFORMS.map(p => {
+    // 主目的地用第一个 dest，其余下拉
+    const url = p.build(origin, dests[0], date);
+    const cls = p.featured ? 'platform featured' : 'platform';
+    return `<a href="${url}" target="_blank" rel="noopener" class="${cls}">
+      <div class="icon">${p.icon}</div>
+      <div class="name">${p.name}</div>
+      <div class="tag">${p.tag}</div>
+    </a>`;
   }).join('');
+  el.innerHTML = html;
 }
 
-function renderTable(containerId, list, target) {
-  const el = $(containerId);
-  if (!list || !list.length) {
-    el.innerHTML = '<div class="empty">未抓到数据</div>';
-    return;
-  }
-  const rows = list.map(o => {
-    const cls = priceClass(o.price_cny, target);
-    return `<tr>
-      <td>${o.flight_no}</td>
-      <td>${o.airline}</td>
-      <td>${o.depart_time} → ${o.arrive_time}</td>
-      <td>${o.origin}→${o.destination}</td>
-      <td class="price ${cls}">${fmt(o.price_cny)}</td>
-      <td style="color:var(--muted);font-size:11px;">${o.source}</td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = `<table>
-    <thead><tr><th>航班</th><th>航司</th><th>时间</th><th>线路</th><th>价格</th><th>来源</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+// 整月日历版（用 Skyscanner / Google flexible date 的月视图）
+function renderMonthPlatforms(containerId, origin, dest) {
+  const el = document.getElementById(containerId);
+  const items = [
+    { name: 'Skyscanner 整月', icon: '🗓️', tag: '日历视图',
+      url: `https://www.skyscanner.com.cn/transport/flights/${origin.toLowerCase()}/${dest.toLowerCase()}/261001/?adults=1&adultsv2=1&cabinclass=economy&inboundaltsenabled=false&infants=0&outboundaltsenabled=false&preferdirects=false&ref=home&rtn=0` },
+    { name: '同程价格日历', icon: '📅', tag: '中文版',
+      url: `https://www.ly.com/flight/airlineList.html?type=1&dCityCode=${origin}&aCityCode=${dest}&dDate=2026-10-01` },
+    { name: 'Google 月视图', icon: '🇬', tag: '需梯子',
+      url: `https://www.google.com/travel/flights?q=Flights%20from%20${origin}%20to%20${dest}` },
+    { name: '携程灵活日期', icon: '🟦', tag: '前后 7 天',
+      url: `https://flights.ctrip.com/online/list/oneway-${origin.toLowerCase()}-${dest.toLowerCase()}?depdate=2026-10-01` },
+    { name: 'Trip.com Calendar', icon: '🌏', tag: '海外版',
+      url: `https://www.trip.com/flights/calendar/showfarefirst?dcity=${origin.toLowerCase()}&acity=${dest.toLowerCase()}&triptype=ow` },
+  ];
+  el.innerHTML = items.map(it => `
+    <a href="${it.url}" target="_blank" rel="noopener" class="platform">
+      <div class="icon">${it.icon}</div>
+      <div class="name">${it.name}</div>
+      <div class="tag">${it.tag}</div>
+    </a>
+  `).join('');
 }
 
-async function load() {
-  try {
-    const url = "../data/flights_latest.json?_=" + Date.now();
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const data = await r.json();
-
-    // 扫描时间
-    const t = new Date(data.scan_time);
-    const ts = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
-    $("scanmeta").innerHTML =
-      `最近扫描：${ts}（北京时间）· 共采集 <strong style="color:var(--txt)">${data.totals.all}</strong> 条 · ` +
-      `去程 ${data.totals.outbound} · 10/5 ${data.totals.return_10_5} · 10/6 ${data.totals.return_10_6}`;
-
-    renderHero(data);
-    renderSources(data);
-    renderCombos(data);
-    renderTable("outboundTop", data.outbound_top10, EXPECTS.outbound);
-    renderTable("return5",      data.return_10_5_top10, EXPECTS.ret);
-    renderTable("return6",      data.return_10_6_top10, EXPECTS.ret);
-
-    // 给 trend.png 加随机后缀避免缓存
-    const img = $("trendImg");
-    img.src = "../data/trend.png?_=" + Date.now();
-  } catch (e) {
-    $("scanmeta").innerHTML = `<span style="color:var(--hot)">加载失败：${e.message}</span> · 等待 GitHub Actions 首次扫描完成`;
-    $("heroPrice").textContent = "等待数据";
-    $("heroDetail").textContent = "首次扫描后将自动显示";
-  }
-}
-
-load();
-// 5 分钟自动重新拉一次（防止用户开着页面没数据）
-setInterval(load, 5 * 60 * 1000);
+// 渲染三段
+// 去程：上海 SHA → 大阪 OSA（包含关西/伊丹），用户进搜索页可换东京
+renderPlatforms('legGo',    'SHA', ['OSA'], '2026-10-01');
+renderPlatforms('legBack5', 'OSA', ['SHA'], '2026-10-05');
+renderPlatforms('legBack6', 'OSA', ['SHA'], '2026-10-06');
+renderMonthPlatforms('legMonth', 'SHA', 'OSA');
 </script>
 
 </body>
